@@ -5,7 +5,7 @@ export default function LeftSide() {
         {/* Wesal Branding */}
         <div className="flex items-center gap-4">
           <img
-            src="/public/wesal-logo.png"
+            src="/wesal-logo.png"
             alt="Wesal Logo"
             className="h-[72px] w-[72px] object-contain"
           />
