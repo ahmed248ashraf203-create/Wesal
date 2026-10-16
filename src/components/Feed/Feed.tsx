@@ -1,31 +1,45 @@
 import { useContext } from "react";
+import axios from "axios";
+import { useQuery } from "@tanstack/react-query";
+
 import CreatePost from "../CreatePost/CreatePost";
 import PostCard from "../PostCard/PostCard";
-import type { Post } from "../../types/post";
-import axios from "axios";
-import { AuthencreatedContext } from "../../context/AuthenContext";
-import { useQuery } from "@tanstack/react-query";
 import Loader from "../Loader/Loader";
 import FeedError from "../FeedError/FeedError";
+
+import type { Post } from "../../types/post";
+import { AuthencreatedContext } from "../../context/AuthenContext";
 
 export default function Feed() {
   const { token } = useContext(AuthencreatedContext);
 
-  function getPosts() {
-    return axios.get("https://route-posts.routemisr.com/posts", {
-      headers: {
-        token: token,
-      },
-    });
-  }
-
   const { data, isLoading, isError, isFetching, refetch } = useQuery({
-    queryKey: ["allPosts"],
-    queryFn: getPosts,
+    queryKey: ["allPosts", token],
+    queryFn: async () => {
+      const response = await axios.get(
+        "https://route-posts.routemisr.com/posts",
+        {
+          headers: { token },
+        },
+      );
+
+      return response.data;
+    },
+    enabled: Boolean(token),
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchInterval: 30_000,
+    retry: 1,
   });
-  const posts: Post[] = data?.data?.data?.posts ?? [];
+
+  const posts: Post[] = data?.data?.posts ?? [];
+
   function handleCreatePost(body: string) {
     console.log("New post:", body);
+  }
+
+  if (!token) {
+    return <p>Please log in to view posts.</p>;
   }
 
   if (isLoading) {
@@ -36,7 +50,6 @@ export default function Feed() {
     return (
       <main className="min-w-0">
         <CreatePost onCreatePost={handleCreatePost} />
-
         <FeedError onRetry={() => refetch()} isRetrying={isFetching} />
       </main>
     );
