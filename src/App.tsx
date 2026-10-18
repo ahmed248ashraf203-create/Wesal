@@ -7,21 +7,18 @@ import LayoutSign from "./pages/LayoutSign/LayoutSign";
 import Login from "./pages/LayoutSign/Login/Login";
 import Signup from "./pages/LayoutSign/Signup/Signup";
 import PageError from "./pages/PageError/PageError";
-import { Toast } from "@heroui/react";
 import AuthenContext from "./context/AuthenContext";
 import ProtectedRout from "./components/ProtectedRout/ProtectedRout";
 import Profile from "./pages/Profile/Profile";
 import Notifications from "./pages/Notifications/Notifications";
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-  QueryClient,
-  QueryClientProvider,
-} from "@tanstack/react-query";
+import MyPosts from "./components/MyPosts/MyPosts";
+
+import { Toast } from "@heroui/react";
+import { QueryClientProvider } from "@tanstack/react-query";
 import queryClient from "./JQuery/JQuery";
+
 function App() {
-  let rout = createBrowserRouter([
+  const rout = createBrowserRouter([
     {
       path: "/",
       element: <LayoutSign />,
@@ -53,6 +50,14 @@ function App() {
           ),
         },
         {
+          path: "/my-posts",
+          element: (
+            <ProtectedRout>
+              <MyPosts />
+            </ProtectedRout>
+          ),
+        },
+        {
           path: "/profile",
           element: (
             <ProtectedRout>
@@ -78,14 +83,12 @@ function App() {
   ]);
 
   return (
-    <>
-      <QueryClientProvider client={queryClient}>
-        <AuthenContext>
-          <Toast.Provider />
-          <RouterProvider router={rout} />
-        </AuthenContext>
-      </QueryClientProvider>
-    </>
+    <QueryClientProvider client={queryClient}>
+      <AuthenContext>
+        <Toast.Provider />
+        <RouterProvider router={rout} />
+      </AuthenContext>
+    </QueryClientProvider>
   );
 }
 

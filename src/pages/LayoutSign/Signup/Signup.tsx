@@ -18,6 +18,7 @@ import axios, { isAxiosError } from "axios";
 import { useContext, useState } from "react";
 import { boolean } from "zod";
 import { AuthencreatedContext } from "../../../context/AuthenContext";
+import FieldError from "../FieldError";
 
 export default function Signup() {
   const {
@@ -117,122 +118,156 @@ export default function Signup() {
         {/* ================= FORM ================= */}
         <form className="space-y-3.5" onSubmit={handleSubmit(myhandleSubmit)}>
           {/* Full Name */}
-          <Input
-            {...register("name")}
-            aria-label="Full name"
-            placeholder="Full name"
-            type="text"
-            className="h-12 w-full rounded-xl border border-[#dce3ec] bg-[#f8fafc] px-4 text-[14px] shadow-none"
-          />
-          {errors.name?.message && (
-            <p className="mt-1.5 flex p-2 rounded-xl items-center gap-1.5 text-xs font-medium text-red-800 bg-red-100 ">
-              <span className="text-sm">⚠</span>
-              {errors.name.message}
-            </p>
-          )}
-          {/* Username */}
-          <Input
-            {...register("username")}
-            aria-label="Username"
-            placeholder="Username (optional)"
-            type="text"
-            className="h-12 w-full rounded-xl border border-[#dce3ec] bg-[#f8fafc] px-4 text-[14px] shadow-none"
-          />
-          {errors.username?.message && (
-            <p className="mt-1.5 flex p-2 rounded-xl items-center gap-1.5 text-xs font-medium text-red-800 bg-red-100 ">
-              <span className="text-sm">⚠</span>
-              {errors.username.message}
-            </p>
-          )}
-          {/* Email */}
-          <Input
-            {...register("email")}
-            aria-label="Email address"
-            placeholder="Email address"
-            type="email"
-            className="h-12 w-full rounded-xl border border-[#dce3ec] bg-[#f8fafc] px-4 text-[14px] shadow-none"
-          />
-          {errors.email?.message && (
-            <p className="mt-1.5 flex p-2 rounded-xl items-center gap-1.5 text-xs font-medium text-red-800 bg-red-100 ">
-              <span className="text-sm">⚠</span>
-              {errors.email.message}
-            </p>
-          )}
-          {/* Gender */}
-          <Select
-            aria-label="Gender"
-            placeholder="Select gender"
-            className="w-full"
-          >
-            <Label className="sr-only">Gender</Label>
-
-            <Select.Trigger className="h-12 rounded-xl border border-[#dce3ec] bg-[#f8fafc] px-4 shadow-none">
-              <FiUsers className="mr-3 text-[20px] text-[#91a4bf]" />
-
-              <Select.Value />
-
-              <Select.Indicator />
-            </Select.Trigger>
-
-            <Select.Popover>
-              <ListBox>
-                <ListBox.Item id="male" textValue="Male">
-                  Male
-                  <ListBox.ItemIndicator />
-                </ListBox.Item>
-
-                <ListBox.Item id="female" textValue="Female">
-                  Female
-                  <ListBox.ItemIndicator />
-                </ListBox.Item>
-              </ListBox>
-            </Select.Popover>
-          </Select>
-
-          {/* Date */}
-          <div className="relative">
-            <FiCalendar className="pointer-events-none absolute left-4 top-1/2 zod-10 -translate-y-1/2 text-[19px] text-[#91a4bf]" />
+          <div>
             <Input
-              {...register("dateOfBirth")}
-              aria-label="Date of birth"
-              type="date"
-              className="h-12 w-full rounded-xl border border-[#dce3ec] bg-[#f8fafc] pl-11 pr-4 text-[14px] shadow-none"
-            />{" "}
-            {errors.dateOfBirth?.message && (
-              <p className="mt-1.5 flex p-2 rounded-xl items-center gap-1.5 text-xs font-medium text-red-800 bg-red-100 ">
-                <span className="text-sm">⚠</span>
-                {errors.dateOfBirth.message}
-              </p>
-            )}
+              {...register("name")}
+              aria-label="Full name"
+              aria-invalid={!!errors.name}
+              placeholder="Full name"
+              type="text"
+              className={`h-12 w-full rounded-xl border px-4 text-[14px] shadow-none transition-all duration-200 ${
+                errors.name
+                  ? "border-red-300 bg-red-50/50 focus-within:ring-2 focus-within:ring-red-100"
+                  : "border-[#dce3ec] bg-[#f8fafc] focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100"
+              }`}
+            />
+            <FieldError message={errors.name?.message} />
           </div>
+
+          {/* Username */}
+          <div>
+            <Input
+              {...register("username")}
+              aria-label="Username"
+              aria-invalid={!!errors.username}
+              placeholder="Username (optional)"
+              type="text"
+              className={`h-12 w-full rounded-xl border px-4 text-[14px] shadow-none transition-all duration-200 ${
+                errors.username
+                  ? "border-red-300 bg-red-50/50 focus-within:ring-2 focus-within:ring-red-100"
+                  : "border-[#dce3ec] bg-[#f8fafc] focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100"
+              }`}
+            />
+            <FieldError message={errors.username?.message} />
+          </div>
+
+          {/* Email */}
+          <div>
+            <Input
+              {...register("email")}
+              aria-label="Email address"
+              aria-invalid={!!errors.email}
+              placeholder="Email address"
+              type="email"
+              className={`h-12 w-full rounded-xl border px-4 text-[14px] shadow-none transition-all duration-200 ${
+                errors.email
+                  ? "border-red-300 bg-red-50/50 focus-within:ring-2 focus-within:ring-red-100"
+                  : "border-[#dce3ec] bg-[#f8fafc] focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100"
+              }`}
+            />
+            <FieldError message={errors.email?.message} />
+          </div>
+
+          {/* Gender */}
+          <div>
+            <Select
+              aria-label="Gender"
+              placeholder="Select gender"
+              className="w-full"
+            >
+              <Label className="sr-only">Gender</Label>
+
+              <Select.Trigger
+                className={`h-12 rounded-xl border bg-[#f8fafc] px-4 shadow-none transition-all duration-200 ${
+                  errors.gender
+                    ? "border-red-300 bg-red-50/50"
+                    : "border-[#dce3ec] focus-within:border-indigo-400"
+                }`}
+              >
+                <FiUsers className="mr-3 text-[20px] text-[#91a4bf]" />
+                <Select.Value />
+                <Select.Indicator />
+              </Select.Trigger>
+
+              <Select.Popover>
+                <ListBox>
+                  <ListBox.Item id="male" textValue="Male">
+                    Male
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+
+                  <ListBox.Item id="female" textValue="Female">
+                    Female
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                </ListBox>
+              </Select.Popover>
+            </Select>
+
+            <FieldError message={errors.gender?.message} />
+          </div>
+
+          {/* Date of Birth */}
+          <div>
+            <div
+              className={`relative rounded-xl transition-all duration-200 ${
+                errors.dateOfBirth
+                  ? "rounded-xl ring-2 ring-red-100"
+                  : "focus-within:ring-2 focus-within:ring-indigo-100"
+              }`}
+            >
+              <FiCalendar className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-[19px] text-[#91a4bf]" />
+
+              <Input
+                {...register("dateOfBirth")}
+                aria-label="Date of birth"
+                aria-invalid={!!errors.dateOfBirth}
+                type="date"
+                className={`h-12 w-full rounded-xl border pl-11 pr-4 text-[14px] shadow-none transition-all duration-200 ${
+                  errors.dateOfBirth
+                    ? "border-red-300 bg-red-50/50"
+                    : "border-[#dce3ec] bg-[#f8fafc] focus-within:border-indigo-400"
+                }`}
+              />
+            </div>
+
+            <FieldError message={errors.dateOfBirth?.message} />
+          </div>
+
           {/* Password */}
-          <Input
-            {...register("password")}
-            aria-label="Password"
-            placeholder="Password"
-            type="password"
-            className="h-12 w-full rounded-xl border border-[#dce3ec] bg-[#f8fafc] px-4 text-[14px] shadow-none"
-          />
-          {errors.password?.message && (
-            <p className="mt-1.5 flex p-2 rounded-xl items-center gap-1.5 text-xs font-medium text-red-800 bg-red-100 ">
-              <span className="text-sm">⚠</span>
-              {errors.password.message}
-            </p>
-          )}
+          <div>
+            <Input
+              {...register("password")}
+              aria-label="Password"
+              aria-invalid={!!errors.password}
+              placeholder="Password"
+              type="password"
+              className={`h-12 w-full rounded-xl border px-4 text-[14px] shadow-none transition-all duration-200 ${
+                errors.password
+                  ? "border-red-300 bg-red-50/50 focus-within:ring-2 focus-within:ring-red-100"
+                  : "border-[#dce3ec] bg-[#f8fafc] focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100"
+              }`}
+            />
+            <FieldError message={errors.password?.message} />
+          </div>
+
           {/* Confirm Password */}
-          <Input
-            {...register("rePassword")}
-            aria-label="Confirm password"
-            placeholder="Confirm password"
-            type="password"
-            className="h-12 w-full rounded-xl border border-[#dce3ec] bg-[#f8fafc] px-4 text-[14px] shadow-none"
-          />
-          {errors.rePassword?.message && (
-            <p className="mt-1.5 flex p-2 rounded-xl items-center gap-1.5 text-xs font-medium text-red-800 bg-red-100 ">
-              <span className="text-sm">⚠</span>
-              {errors.rePassword.message}
-            </p>
-          )}
+          <div>
+            <Input
+              {...register("rePassword")}
+              aria-label="Confirm password"
+              aria-invalid={!!errors.rePassword}
+              placeholder="Confirm password"
+              type="password"
+              className={`h-12 w-full rounded-xl border px-4 text-[14px] shadow-none transition-all duration-200 ${
+                errors.rePassword
+                  ? "border-red-300 bg-red-50/50 focus-within:ring-2 focus-within:ring-red-100"
+                  : "border-[#dce3ec] bg-[#f8fafc] focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100"
+              }`}
+            />
+            <FieldError message={errors.rePassword?.message} />
+          </div>
+
           {/* Submit */}
           <Button
             isDisabled={loading}
@@ -240,7 +275,7 @@ export default function Signup() {
             variant="primary"
             className="mt-1 h-13 w-full rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 text-[16px] font-bold text-white shadow-none transition duration-300 hover:brightness-110"
           >
-            {loading ? "loading..." : "  Create New Account"}
+            {loading ? "Loading..." : "Create New Account"}
           </Button>
         </form>
       </section>

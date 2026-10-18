@@ -1,5 +1,7 @@
 import { useContext, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 import { AuthencreatedContext } from "../../context/AuthenContext";
 import {
   FaBars,
@@ -10,27 +12,69 @@ import {
   FaHouse,
   FaBell,
 } from "react-icons/fa6";
+
 const navLinks = [
-  {
-    name: "Feed",
-    path: "/home",
-    icon: FaHouse,
-  },
-  {
-    name: "Profile",
-    path: "/profile",
-    icon: FaUser,
-  },
-  {
-    name: "Notifications",
-    path: "/Notifications",
-    icon: FaBell,
-  },
+  { name: "Feed", path: "/home", icon: FaHouse },
+  { name: "Profile", path: "/profile", icon: FaUser },
+  { name: "Notifications", path: "/Notifications", icon: FaBell },
 ];
+
+const baseUrl = "https://route-posts.routemisr.com";
+const defaultAvatar = "/default-avata.jpg";
+interface UserProfile {
+  _id?: string;
+  name?: string;
+  username?: string;
+  email?: string;
+  photo?: string | null;
+  image?: string | null;
+}
+
+function handleImageError(event: React.SyntheticEvent<HTMLImageElement>) {
+  const img = event.currentTarget;
+
+  // امنع تكرار محاولة تحميل الصورة الافتراضية
+  if (img.dataset.fallbackApplied === "true") {
+    img.style.visibility = "hidden";
+    return;
+  }
+
+  img.dataset.fallbackApplied = "true";
+  img.src = defaultAvatar;
+}
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { token, removesetToken } = useContext(AuthencreatedContext);
+
+  const { data: userData } = useQuery<UserProfile>({
+    queryKey: ["userProfile", token],
+    queryFn: async () => {
+      const response = await axios.get(`${baseUrl}/users/profile-data`, {
+        headers: { token },
+        timeout: 15000,
+      });
+
+      const result =
+        response.data?.user ??
+        response.data?.data?.user ??
+        response.data?.data ??
+        response.data;
+
+      return result;
+    },
+    enabled: Boolean(token),
+    staleTime: 1000 * 60 * 5,
+    retry: 1,
+  });
+
+  const userName = userData?.name || userData?.username || "My Account";
+  const userEmail =
+    userData?.email ||
+    (userData?.username ? `@${userData.username}` : "Welcome back to Wesal!");
+
+  const userPhoto = userData?.photo || userData?.image || defaultAvatar;
+
   return (
     <nav className="sticky top-0 z-50 border-b border-gray-200 bg-white">
       <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-4 px-4">
@@ -39,7 +83,6 @@ export default function Navbar() {
           to="/home"
           className="group flex shrink-0 items-center gap-3 transition-all duration-300"
         >
-          {/* Logo */}
           <div className="relative flex h-12 w-12 items-center justify-center transition-transform duration-300 group-hover:scale-110">
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-500/20 via-indigo-500/15 to-violet-500/20 opacity-0 blur-md transition-opacity duration-300 group-hover:opacity-100" />
 
@@ -50,13 +93,12 @@ export default function Navbar() {
             />
           </div>
 
-          {/* Brand Name */}
           <span className="bg-gradient-to-r from-blue-700 via-indigo-600 to-violet-600 bg-clip-text text-3xl font-extrabold tracking-tight text-transparent transition-all duration-300 group-hover:from-blue-600 group-hover:via-indigo-500 group-hover:to-violet-500">
             wesal
           </span>
         </Link>
 
-        {/* Dynamic Navigation Links */}
+        {/* Navigation Links */}
         <div className="hidden items-center gap-3 sm:flex">
           {navLinks.map((link) => {
             const Icon = link.icon;
@@ -84,7 +126,7 @@ export default function Navbar() {
         <div className="relative">
           <button
             type="button"
-            onClick={() => setMenuOpen(!menuOpen)}
+            onClick={() => setMenuOpen((open) => !open)}
             aria-expanded={menuOpen}
             aria-label="Open account menu"
             className={`group flex items-center gap-3 rounded-2xl border p-2 pr-3 transition-all duration-300 ${
@@ -93,26 +135,26 @@ export default function Navbar() {
                 : "border-gray-200/80 bg-white hover:border-indigo-200 hover:bg-indigo-50/40 hover:shadow-md hover:shadow-indigo-100/50"
             }`}
           >
-            {/* Profile Image */}
+            {/* Dynamic Profile Image */}
             <div className="rounded-full bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600 p-[2px] transition-transform duration-300 group-hover:scale-105">
               <img
-                src="https://i.pravatar.cc/100?img=12"
-                alt="Profile"
+                src={userPhoto}
+                alt={userName}
+                onError={handleImageError}
                 className="h-10 w-10 rounded-full border-2 border-white object-cover"
               />
             </div>
 
-            {/* Account Info */}
-            <div className="hidden text-left sm:block">
-              <p className="text-sm font-bold text-gray-800 transition-colors group-hover:text-indigo-600">
-                My Account
+            {/* Dynamic Account Info */}
+            <div className="hidden max-w-[140px] text-left sm:block">
+              <p className="truncate text-sm font-bold text-gray-800 transition-colors group-hover:text-indigo-600">
+                {userName}
               </p>
-              <p className="mt-0.5 text-[11px] font-medium text-gray-400">
+              <p className="mt-0.5 truncate text-[11px] font-medium text-gray-400">
                 Manage your profile
               </p>
             </div>
 
-            {/* Menu Icon */}
             <div
               className={`ml-1 flex h-8 w-8 items-center justify-center rounded-xl transition-all duration-300 ${
                 menuOpen
@@ -135,23 +177,24 @@ export default function Navbar() {
               />
 
               <div className="absolute right-0 z-50 mt-3 w-72 origin-top-right animate-in fade-in slide-in-from-top-2 duration-200 rounded-2xl border border-gray-100 bg-white p-2 shadow-2xl shadow-indigo-950/10 ring-1 ring-black/[0.03]">
-                {/* Dropdown Header */}
+                {/* Dynamic Dropdown Header */}
                 <div className="mb-2 rounded-xl bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600 p-4">
                   <div className="flex items-center gap-3">
-                    <div className="rounded-full bg-white/20 p-[2px]">
+                    <div className="shrink-0 rounded-full bg-white/20 p-[2px]">
                       <img
-                        src="https://i.pravatar.cc/100?img=12"
-                        alt="Profile"
+                        src={userPhoto}
+                        alt={userName}
+                        onError={handleImageError}
                         className="h-12 w-12 rounded-full border-2 border-white/70 object-cover"
                       />
                     </div>
 
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="truncate font-bold text-white">
-                        My Account
+                        {userName}
                       </p>
-                      <p className="mt-1 text-xs text-blue-100">
-                        Welcome back to Wesal!
+                      <p className="mt-1 truncate text-xs text-blue-100">
+                        {userEmail}
                       </p>
                     </div>
                   </div>
@@ -202,7 +245,6 @@ export default function Navbar() {
                   </Link>
                 </div>
 
-                {/* Divider */}
                 <div className="my-2 border-t border-gray-100" />
 
                 {/* Logout */}
@@ -228,7 +270,6 @@ export default function Navbar() {
                   </span>
                 </button>
 
-                {/* Footer */}
                 <p className="pb-1 pt-2 text-center text-[10px] font-medium tracking-wide text-gray-400">
                   MADE WITH ♥ BY WESAL
                 </p>
