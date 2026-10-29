@@ -20,7 +20,6 @@ import {
 
 import { AuthencreatedContext } from "../../context/AuthenContext";
 import axios from "axios";
-
 interface NotificationItem {
   _id: string;
   actor?: {
