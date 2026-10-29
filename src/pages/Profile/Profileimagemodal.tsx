@@ -1,13 +1,13 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
+import { api } from "../../lib/api";
+import { useModalA11y } from "../../hooks/useModalA11y";
 import { FaXmark, FaCircleExclamation } from "react-icons/fa6";
 
 import { AuthencreatedContext } from "../../context/AuthenContext";
 
 export type ImageKind = "photo" | "cover";
-
-const baseUrl = "https://route-posts.routemisr.com";
 
 const UPLOAD_CONFIG: Record<
   ImageKind,
@@ -69,21 +69,14 @@ export default function ProfileImageModal({
       const formData = new FormData();
       formData.append(config.field, file);
 
-      const response = await axios.put(
-        `${baseUrl}${config.endpoint}`,
-        formData,
-        {
-          headers: {
-            token,
-          },
-          timeout: 15000,
-          onUploadProgress: (event) => {
-            if (event.total) {
-              setProgress(Math.round((event.loaded * 100) / event.total));
-            }
-          },
+      const response = await api.put(config.endpoint, formData, {
+        timeout: 60_000,
+        onUploadProgress: (event) => {
+          if (event.total) {
+            setProgress(Math.round((event.loaded * 100) / event.total));
+          }
         },
-      );
+      });
 
       return response.data;
     },
@@ -110,19 +103,8 @@ export default function ProfileImageModal({
       onSuccess(kind);
     },
 
-    onError: (error) => {
+    onError: () => {
       setProgress(0);
-
-      if (axios.isAxiosError(error)) {
-        console.error("Upload error:", {
-          message: error.message,
-          code: error.code,
-          status: error.response?.status,
-          response: error.response?.data,
-        });
-      } else {
-        console.error("Upload error:", error);
-      }
     },
   });
 
@@ -135,20 +117,9 @@ export default function ProfileImageModal({
     }
   };
 
-  // إغلاق النافذة بزر Escape
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !isPending) {
-        onClose();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isPending, onClose]);
+  // Esc, focus trap and scroll lock
+  const dialogRef = useRef<HTMLElement | null>(null);
+  useModalA11y(dialogRef, safeClose);
 
   // رسالة الخطأ
   const errorMessage = uploadMutation.isError
@@ -170,6 +141,8 @@ export default function ProfileImageModal({
       onClick={safeClose}
     >
       <section
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="profile-image-title"

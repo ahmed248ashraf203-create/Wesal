@@ -1,6 +1,6 @@
 import { useContext, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
 import {
   FaGlobe,
   FaEllipsis,
@@ -21,14 +21,17 @@ import DetailsPost from "../DetailsPost/DetailsPost";
 import { AuthencreatedContext } from "../../context/AuthenContext";
 import { getUserIdFromToken } from "./Getuseridfromtoken";
 import ModalErrorBoundary from "./Modalerrorboundary";
+import ModalShell from "../Modal/ModalShell";
+import { api, getErrorMessage } from "../../lib/api";
+import { handleAvatarError, DEFAULT_AVATAR } from "../../lib/avatar";
+import { timeAgo, fullDate } from "../../lib/time";
+import { useBookmark } from "../../hooks/useBookmark";
 
 interface PostCardProps {
   post: Post;
 }
 
 type LikeUser = string | { _id?: string };
-
-const baseUrl = "https://route-posts.routemisr.com";
 
 export default function PostCard({ post }: PostCardProps) {
   const { token } = useContext(AuthencreatedContext);
@@ -48,7 +51,8 @@ export default function PostCard({ post }: PostCardProps) {
   );
 
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
+  const bookmark = useBookmark(post);
+  const [shareMessage, setShareMessage] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
 
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -59,49 +63,53 @@ export default function PostCard({ post }: PostCardProps) {
 
   const imageInputRef = useRef<HTMLInputElement>(null);
 
-  const postImage =
-    (post as Post & { image?: string; imageUrl?: string }).image ??
-    (post as Post & { imageUrl?: string }).imageUrl;
+  const postImage = post.image ?? post.imageUrl;
+
+  const profilePath =
+    postOwnerId && postOwnerId !== currentUserId
+      ? `/profile/${postOwnerId}`
+      : "/profile";
 
   const [optimistic, setOptimistic] = useState<{
     liked: boolean;
     count: number;
   } | null>(null);
 
-  // ---------------- GET POST LIKES ----------------
+  // ---------------- LIKES ----------------
+  // likesCount / likes / isLiked already come with the post, so there is no
+  // request per card any more (10 posts used to mean 10 extra /likes calls).
+  // Only if the post gives us no usable "who liked it" info at all do we fall
+  // back to one lazy request for that single card.
+
+  const embeddedLikes: LikeUser[] = Array.isArray(post.likes) ? post.likes : [];
+
+  const needsLikesLookup =
+    typeof post.isLiked !== "boolean" &&
+    embeddedLikes.length === 0 &&
+    (post.likesCount ?? 0) > 0;
 
   const { data: likesData } = useQuery({
     queryKey: ["postLikes", post._id, token],
     queryFn: async () => {
-      const response = await axios.get(`${baseUrl}/posts/${post._id}/likes`, {
+      const response = await api.get(`/posts/${post._id}/likes`, {
         params: { page: 1, limit: 20 },
-        headers: { token },
       });
 
       return response.data;
     },
-    enabled: Boolean(token && post._id),
-    staleTime: 30_000,
+    enabled: Boolean(token && post._id && needsLikesLookup),
+    staleTime: 60_000,
     retry: 1,
   });
 
-  const likesList: LikeUser[] =
+  const fetchedLikes: LikeUser[] =
     likesData?.data?.likes ??
     likesData?.data?.data?.likes ??
     (Array.isArray(likesData?.data) ? likesData.data : []);
 
-  const paginationInfo =
-    likesData?.data?.paginationInfo ?? likesData?.paginationInfo;
+  const likesList = embeddedLikes.length > 0 ? embeddedLikes : fetchedLikes;
 
-  const totalFromServer: number | undefined =
-    paginationInfo?.total ??
-    paginationInfo?.totalItems ??
-    paginationInfo?.numberOfItems;
-
-  const serverLikesCount =
-    totalFromServer ??
-    (post as Post & { likesCount?: number }).likesCount ??
-    likesList.length;
+  const serverLikesCount = post.likesCount ?? likesList.length;
 
   const listIncludesMe = currentUserId
     ? likesList.some(
@@ -111,9 +119,7 @@ export default function PostCard({ post }: PostCardProps) {
     : false;
 
   const serverIsLiked =
-    typeof (post as Post & { isLiked?: boolean }).isLiked === "boolean"
-      ? (post as Post & { isLiked?: boolean }).isLiked!
-      : listIncludesMe;
+    typeof post.isLiked === "boolean" ? post.isLiked : listIncludesMe;
 
   const isLiked = optimistic?.liked ?? serverIsLiked;
   const likesCount = optimistic?.count ?? serverLikesCount;
@@ -130,21 +136,12 @@ export default function PostCard({ post }: PostCardProps) {
         throw new Error("Post ID is missing.");
       }
 
-      const response = await axios.put(
-        `${baseUrl}/posts/${post._id}/like`,
-        {},
-        { headers: { token } },
-      );
+      const response = await api.put(`/posts/${post._id}/like`);
 
       return response.data;
     },
 
-    onError: (error) => {
-      console.error(
-        "Like API error:",
-        axios.isAxiosError(error) ? error.response?.data : error,
-      );
-
+    onError: () => {
       setOptimistic(null);
     },
 
@@ -196,13 +193,7 @@ export default function PostCard({ post }: PostCardProps) {
         formData.append("image", editImage);
       }
 
-      const response = await axios.put(
-        `${baseUrl}/posts/${post._id}`,
-        formData,
-        {
-          headers: { token },
-        },
-      );
+      const response = await api.put(`/posts/${post._id}`, formData);
 
       return response.data;
     },
@@ -226,14 +217,7 @@ export default function PostCard({ post }: PostCardProps) {
     },
 
     onError: (error) => {
-      setEditError(
-        axios.isAxiosError(error)
-          ? (error.response?.data?.message ??
-              "Failed to update post. Please try again.")
-          : error instanceof Error
-            ? error.message
-            : "Failed to update post.",
-      );
+      setEditError(getErrorMessage(error, "Failed to update post."));
     },
   });
 
@@ -268,9 +252,7 @@ export default function PostCard({ post }: PostCardProps) {
         throw new Error("Post ID is missing.");
       }
 
-      const response = await axios.delete(`${baseUrl}/posts/${post._id}`, {
-        headers: { token },
-      });
+      const response = await api.delete(`/posts/${post._id}`);
 
       return response.data;
     },
@@ -293,16 +275,35 @@ export default function PostCard({ post }: PostCardProps) {
     },
 
     onError: (error) => {
-      setEditError(
-        axios.isAxiosError(error)
-          ? (error.response?.data?.message ??
-              "Failed to delete post. Please try again.")
-          : error instanceof Error
-            ? error.message
-            : "Failed to delete post.",
-      );
+      setEditError(getErrorMessage(error, "Failed to delete post."));
     },
   });
+
+  // ---------------- SHARE (copy link / native share sheet) ----------------
+
+  async function handleShare() {
+    const url = `${window.location.origin}/home?post=${encodeURIComponent(post._id)}`;
+
+    try {
+      if (typeof navigator.share === "function") {
+        await navigator.share({
+          title: `${user?.name ?? "Wesal"} on Wesal`,
+          text: body ? body.slice(0, 120) : undefined,
+          url,
+        });
+        return;
+      }
+
+      await navigator.clipboard.writeText(url);
+      setShareMessage("Link copied!");
+    } catch (error) {
+      // Closing the native share sheet throws AbortError: not a real failure.
+      if ((error as DOMException)?.name === "AbortError") return;
+      setShareMessage("Couldn't copy the link.");
+    } finally {
+      window.setTimeout(() => setShareMessage(""), 2500);
+    }
+  }
 
   return (
     <>
@@ -311,19 +312,18 @@ export default function PostCard({ post }: PostCardProps) {
 
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3.5">
-            <img
-              src={user?.photo || "/default-avatar.png"}
-              alt={user?.name || "User"}
-              onError={(event) => {
-                event.currentTarget.onerror = null;
-                event.currentTarget.src = "/default-avatar.png";
-              }}
-              className="h-12 w-12 shrink-0 cursor-pointer rounded-full object-cover ring-2 ring-gray-50 transition-transform hover:scale-105"
-            />
+            <Link to={profilePath} aria-label={`Open ${user?.name ?? "user"}'s profile`}>
+              <img
+                src={user?.photo || DEFAULT_AVATAR}
+                alt={user?.name || "User"}
+                onError={handleAvatarError}
+                className="h-12 w-12 shrink-0 cursor-pointer rounded-full object-cover ring-2 ring-gray-50 transition-transform hover:scale-105"
+              />
+            </Link>
 
             <div className="min-w-0">
               <h3 className="truncate font-bold text-gray-900 transition-colors hover:text-blue-600">
-                {user?.name || "Wesal Member"}
+                <Link to={profilePath}>{user?.name || "Wesal Member"}</Link>
               </h3>
 
               <p className="truncate text-sm text-gray-500">
@@ -337,12 +337,9 @@ export default function PostCard({ post }: PostCardProps) {
               >
                 <FaGlobe className="text-[10px]" />
 
-                {createdAt
-                  ? new Date(createdAt).toLocaleString(undefined, {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    })
-                  : ""}
+                <time dateTime={createdAt} title={fullDate(createdAt)}>
+                  {timeAgo(createdAt)}
+                </time>
               </button>
             </div>
           </div>
@@ -427,9 +424,52 @@ export default function PostCard({ post }: PostCardProps) {
 
         {post.sharedPost && (
           <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50/30 p-4 shadow-sm">
-            <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-gray-700">
-              {post.sharedPost.body}
-            </p>
+            <div className="mb-3 flex items-center gap-3">
+              <Link
+                to={
+                  post.sharedPost.user?._id &&
+                  post.sharedPost.user._id !== currentUserId
+                    ? `/profile/${post.sharedPost.user._id}`
+                    : "/profile"
+                }
+                className="shrink-0"
+              >
+                <img
+                  src={post.sharedPost.user?.photo || DEFAULT_AVATAR}
+                  alt={post.sharedPost.user?.name || "User"}
+                  onError={handleAvatarError}
+                  className="h-9 w-9 rounded-full object-cover"
+                />
+              </Link>
+
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-gray-900">
+                  {post.sharedPost.user?.name || "Wesal Member"}
+                </p>
+                <p className="truncate text-xs text-gray-400">
+                  @{post.sharedPost.user?.username || "member"} ·{" "}
+                  {timeAgo(post.sharedPost.createdAt)}
+                </p>
+              </div>
+            </div>
+
+            {post.sharedPost.body && (
+              <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-gray-700">
+                {post.sharedPost.body}
+              </p>
+            )}
+
+            {(post.sharedPost.image ?? post.sharedPost.imageUrl) && (
+              <img
+                src={post.sharedPost.image ?? post.sharedPost.imageUrl}
+                alt="Shared post attachment"
+                loading="lazy"
+                onError={(event) => {
+                  event.currentTarget.style.display = "none";
+                }}
+                className="mt-3 max-h-80 w-full rounded-xl object-contain"
+              />
+            )}
           </div>
         )}
 
@@ -476,6 +516,8 @@ export default function PostCard({ post }: PostCardProps) {
 
             <button
               type="button"
+              onClick={handleShare}
+              aria-label="Share post"
               className="flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold text-gray-500 transition-all hover:bg-green-50 hover:text-green-600"
             >
               <FaShare size={18} />
@@ -488,18 +530,34 @@ export default function PostCard({ post }: PostCardProps) {
 
           <button
             type="button"
-            onClick={() => setIsSaved((previous) => !previous)}
-            aria-label="Save post"
-            aria-pressed={isSaved}
-            className={`flex h-10 w-10 items-center justify-center rounded-full transition-all hover:bg-yellow-50 ${
-              isSaved
+            onClick={bookmark.toggle}
+            disabled={!token || bookmark.isPending}
+            aria-label={bookmark.isBookmarked ? "Remove from saved" : "Save post"}
+            aria-pressed={bookmark.isBookmarked}
+            className={`flex h-10 w-10 items-center justify-center rounded-full transition-all hover:bg-yellow-50 disabled:opacity-60 ${
+              bookmark.isBookmarked
                 ? "text-yellow-500"
                 : "text-gray-400 hover:text-yellow-500"
             }`}
           >
-            {isSaved ? <FaBookmark size={18} /> : <FaRegBookmark size={18} />}
+            {bookmark.isBookmarked ? (
+              <FaBookmark size={18} />
+            ) : (
+              <FaRegBookmark size={18} />
+            )}
           </button>
         </div>
+
+        {(shareMessage || bookmark.error) && (
+          <p
+            role="status"
+            className={`mt-2 text-xs ${
+              bookmark.error ? "text-red-500" : "text-emerald-600"
+            }`}
+          >
+            {bookmark.error || shareMessage}
+          </p>
+        )}
 
         {togglePostLikeMutation.isError && (
           <p role="alert" className="mt-3 text-xs text-red-500">
@@ -533,13 +591,15 @@ export default function PostCard({ post }: PostCardProps) {
       {/* Edit Post Modal */}
 
       {isEditOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={`edit-title-${post._id}`}
-            className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl"
-          >
+        <ModalShell
+          labelledBy={`edit-title-${post._id}`}
+          onClose={() => {
+            if (updatePostMutation.isPending) return;
+            setIsEditOpen(false);
+            setEditError("");
+          }}
+        >
+          <>
             <div className="mb-4 flex items-center justify-between border-b border-gray-100 pb-4">
               <h2
                 id={`edit-title-${post._id}`}
@@ -661,20 +721,24 @@ export default function PostCard({ post }: PostCardProps) {
                 {updatePostMutation.isPending ? "Saving..." : "Save changes"}
               </button>
             </div>
-          </section>
-        </div>
+          </>
+        </ModalShell>
       )}
 
       {/* Delete Confirmation Modal */}
 
       {isDeleteOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
-          <section
-            role="alertdialog"
-            aria-modal="true"
-            aria-labelledby={`delete-title-${post._id}`}
-            className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"
-          >
+        <ModalShell
+          role="alertdialog"
+          labelledBy={`delete-title-${post._id}`}
+          className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"
+          onClose={() => {
+            if (deletePostMutation.isPending) return;
+            setIsDeleteOpen(false);
+            setEditError("");
+          }}
+        >
+          <>
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-50 text-red-600">
               <FaTrash size={22} />
             </div>
@@ -719,8 +783,8 @@ export default function PostCard({ post }: PostCardProps) {
                 {deletePostMutation.isPending ? "Deleting..." : "Delete"}
               </button>
             </div>
-          </section>
-        </div>
+          </>
+        </ModalShell>
       )}
 
       {/* Details Post Modal */}

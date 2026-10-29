@@ -1,6 +1,6 @@
 import { useContext, useEffect, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
 import {
   FaRegEnvelope,
   FaCircleCheck,
@@ -13,6 +13,7 @@ import {
   FaAt,
   FaCircleExclamation,
   FaRotateRight,
+  FaCheck,
 } from "react-icons/fa6";
 
 import { AuthencreatedContext } from "../../context/AuthenContext";
@@ -21,11 +22,15 @@ import PageError from "../PageError/PageError";
 import ProfileSkeleton from "../../components/ProfileSkeleton/ProfileSkeleton";
 import PostCard from "../../components/PostCard/PostCard";
 import CreatePost from "../../components/CreatePost/CreatePost";
+import Seo from "../../components/Seo/Seo";
 
 import { getUserIdFromToken } from "../../components/PostCard/Getuseridfromtoken";
-import ProfileImageModal, { ImageKind } from "./Profileimagemodal";
-
-const baseUrl = "https://route-posts.routemisr.com";
+import ProfileImageModal from "./Profileimagemodal";
+import type { ImageKind } from "./Profileimagemodal";
+import { api, getErrorMessage } from "../../lib/api";
+import { DEFAULT_AVATAR, handleAvatarError } from "../../lib/avatar";
+import { useBookmarks } from "../../hooks/useBookmarks";
+import { useFollow } from "../../hooks/useFollow";
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
@@ -44,6 +49,7 @@ type ProfileUser = {
   followingCount?: number;
   bookmarksCount?: number;
   postsCount?: number;
+  isFollowing?: boolean;
 };
 
 type ApiResponse<T> = {
@@ -83,6 +89,13 @@ export default function Profile() {
   const { token } = useContext(AuthencreatedContext);
   const queryClient = useQueryClient();
 
+  // /profile        -> my own profile
+  // /profile/:id    -> someone else's profile (or mine, if the id is mine)
+  const { id: routeId } = useParams<{ id: string }>();
+  const myId = getUserIdFromToken(token);
+  const isOwnProfile = !routeId || routeId === myId;
+  const follow = useFollow();
+
   const [activeTab, setActiveTab] = useState<"myPosts" | "saved">("myPosts");
 
   const [pendingImage, setPendingImage] = useState<{
@@ -105,14 +118,12 @@ export default function Profile() {
     isLoading: isProfileLoading,
     isError: isProfileError,
   } = useQuery<ProfileUser>({
-    queryKey: ["userProfile", token],
+    // Own profile shares the Navbar's cache entry; other users get their own.
+    queryKey: isOwnProfile ? ["userProfile", token] : ["publicProfile", routeId],
 
     queryFn: async () => {
-      const response = await axios.get<ApiResponse<ProfileUser>>(
-        `${baseUrl}/users/profile-data`,
-        {
-          headers: { token },
-        },
+      const response = await api.get<ApiResponse<ProfileUser>>(
+        isOwnProfile ? "/users/profile-data" : `/users/${routeId}/profile`,
       );
 
       const result = response.data;
@@ -138,8 +149,9 @@ export default function Profile() {
 
   const user: ProfileUser = profileData ?? {};
 
-  const userId =
-    user._id ?? user.id ?? (token ? getUserIdFromToken(token) : null);
+  const userId = isOwnProfile
+    ? (user._id ?? user.id ?? myId)
+    : (routeId ?? user._id ?? user.id ?? null);
 
   // ---------------------------------------------------------
   // User posts
@@ -158,11 +170,8 @@ export default function Profile() {
     queryFn: async () => {
       if (!userId) return [];
 
-      const response = await axios.get<ApiResponse<Post> | Post[]>(
-        `${baseUrl}/users/${userId}/posts`,
-        {
-          headers: { token },
-        },
+      const response = await api.get<ApiResponse<Post> | Post[]>(
+        `/users/${userId}/posts`,
       );
 
       return getPostsFromResponse(response.data);
@@ -179,20 +188,18 @@ export default function Profile() {
   // ---------------------------------------------------------
 
   const createPostMutation = useMutation({
-    mutationFn: async (body: string) => {
+    mutationFn: async ({ body, image }: { body: string; image?: File }) => {
       if (!token) {
         throw new Error("You must be logged in to create a post.");
       }
 
-      const response = await axios.post(
-        `${baseUrl}/posts`,
-        { body },
-        {
-          headers: {
-            token,
-          },
-        },
-      );
+      // multipart/form-data, so the image is actually uploaded.
+      // (It used to send JSON { body } and silently drop the photo.)
+      const formData = new FormData();
+      if (body) formData.append("body", body);
+      if (image) formData.append("image", image);
+
+      const response = await api.post("/posts", formData);
 
       return response.data;
     },
@@ -220,31 +227,43 @@ export default function Profile() {
     },
 
     onError: (error) => {
-      let message = "Failed to create post. Please try again.";
-
-      if (axios.isAxiosError(error)) {
-        message = error.response?.data?.message || error.message || message;
-      }
-
       setToast({
         type: "error",
-        message,
+        message: getErrorMessage(
+          error,
+          "Failed to create post. Please try again.",
+        ),
       });
     },
   });
 
-  const handleCreatePost = async (body: string): Promise<boolean> => {
-    if (!token || !body.trim() || createPostMutation.isPending) {
+  const handleCreatePost = async (
+    body: string,
+    image?: File,
+  ): Promise<boolean> => {
+    if (!token || (!body.trim() && !image) || createPostMutation.isPending) {
       return false;
     }
 
     try {
-      await createPostMutation.mutateAsync(body.trim());
+      await createPostMutation.mutateAsync({ body: body.trim(), image });
       return true;
     } catch {
       return false;
     }
   };
+
+  // ---------------------------------------------------------
+  // Saved posts (own profile only)
+  // GET /users/bookmarks
+  // ---------------------------------------------------------
+
+  const {
+    data: savedPosts = [],
+    isLoading: isSavedLoading,
+    isError: isSavedError,
+    refetch: refetchSaved,
+  } = useBookmarks(isOwnProfile && activeTab === "saved");
 
   // ---------------------------------------------------------
   // Toast
@@ -267,8 +286,7 @@ export default function Profile() {
   const displayName = user.name || "Wesal Member";
   const username = user.username || user.email?.split("@")[0] || "member";
 
-  // استخدم اسم صورة الـ fallback الصحيح عندك
-  const avatar = user.photo || "/default-avata.jpg";
+  const avatar = user.photo || DEFAULT_AVATAR;
   const cover = user.cover ?? user.coverImage ?? user.coverPhoto;
 
   const stats = [
@@ -287,11 +305,15 @@ export default function Profile() {
       label: "Following",
       value: user.followingCount ?? 0,
     },
-    {
-      icon: <FaBookmark />,
-      label: "Bookmarks",
-      value: user.bookmarksCount ?? 0,
-    },
+    ...(isOwnProfile
+      ? [
+          {
+            icon: <FaBookmark />,
+            label: "Bookmarks",
+            value: user.bookmarksCount ?? savedPosts.length,
+          },
+        ]
+      : []),
   ];
 
   const formatCount = (count: number) =>
@@ -377,12 +399,23 @@ export default function Profile() {
     return <PageError />;
   }
 
+  const userIsFollowed = follow.isFollowing(
+    String(userId ?? ""),
+    Boolean(user.isFollowing),
+  );
+
   // ---------------------------------------------------------
   // UI
   // ---------------------------------------------------------
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+      <Seo
+        title={isOwnProfile ? "My profile" : displayName}
+        description={`${displayName} (@${username}) on Wesal.`}
+        noIndex
+      />
+
       <div className="mx-auto max-w-6xl">
         {/* ===================== Header card ===================== */}
 
@@ -406,15 +439,16 @@ export default function Profile() {
             {!cover && (
               <div className="absolute bottom-5 left-6 text-white sm:left-8">
                 <p className="text-sm font-medium text-white/80">
-                  Welcome to your space
+                  {isOwnProfile ? "Welcome to your space" : "Wesal profile"}
                 </p>
 
                 <h1 className="mt-1 text-2xl font-bold sm:text-3xl">
-                  My Profile
+                  {isOwnProfile ? "My Profile" : displayName}
                 </h1>
               </div>
             )}
 
+            {isOwnProfile && (
             <button
               type="button"
               onClick={() => coverInputRef.current?.click()}
@@ -428,7 +462,9 @@ export default function Profile() {
 
               <span className="sm:hidden">Cover</span>
             </button>
+            )}
 
+            {isOwnProfile && (
             <input
               ref={coverInputRef}
               type="file"
@@ -437,6 +473,7 @@ export default function Profile() {
               className="hidden"
               aria-label="Upload cover photo"
             />
+            )}
           </div>
 
           {/* Identity */}
@@ -449,30 +486,31 @@ export default function Profile() {
                 <img
                   src={avatar}
                   alt={displayName}
-                  onError={(event) => {
-                    event.currentTarget.onerror = null;
-                    event.currentTarget.src = "/default-avata.jpg";
-                  }}
+                  onError={handleAvatarError}
                   className="h-32 w-32 rounded-full border-4 border-white bg-white object-cover shadow-xl sm:h-40 sm:w-40"
                 />
 
-                <button
-                  type="button"
-                  onClick={() => photoInputRef.current?.click()}
-                  aria-label="Change profile photo"
-                  className="absolute bottom-1 right-1 flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg ring-4 ring-white transition-all hover:scale-105 hover:bg-blue-700 focus:outline-none focus:ring-blue-200"
-                >
-                  <FaCamera size={16} />
-                </button>
+                {isOwnProfile && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => photoInputRef.current?.click()}
+                      aria-label="Change profile photo"
+                      className="absolute bottom-1 right-1 flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg ring-4 ring-white transition-all hover:scale-105 hover:bg-blue-700 focus:outline-none focus:ring-blue-200"
+                    >
+                      <FaCamera size={16} />
+                    </button>
 
-                <input
-                  ref={photoInputRef}
-                  type="file"
-                  accept={ALLOWED_TYPES.join(",")}
-                  onChange={handleFileChange("photo")}
-                  className="hidden"
-                  aria-label="Upload profile photo"
-                />
+                    <input
+                      ref={photoInputRef}
+                      type="file"
+                      accept={ALLOWED_TYPES.join(",")}
+                      onChange={handleFileChange("photo")}
+                      className="hidden"
+                      aria-label="Upload profile photo"
+                    />
+                  </>
+                )}
               </div>
 
               <div className="min-w-0 flex-1 pb-1 sm:pb-3">
@@ -492,13 +530,32 @@ export default function Profile() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 self-start rounded-full bg-emerald-50 px-3.5 py-1.5 text-sm font-semibold text-emerald-700 sm:mb-4 sm:self-end">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-                </span>
-                Member on Wesal
-              </div>
+              {isOwnProfile ? (
+                <div className="flex items-center gap-2 self-start rounded-full bg-emerald-50 px-3.5 py-1.5 text-sm font-semibold text-emerald-700 sm:mb-4 sm:self-end">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                  </span>
+                  Member on Wesal
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() =>
+                    follow.toggle(String(userId), Boolean(user.isFollowing))
+                  }
+                  disabled={!userId || follow.isPending(String(userId))}
+                  aria-pressed={userIsFollowed}
+                  className={`flex items-center gap-2 self-start rounded-full px-5 py-2 text-sm font-semibold transition disabled:opacity-60 sm:mb-4 sm:self-end ${
+                    userIsFollowed
+                      ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                      : "bg-blue-600 text-white hover:bg-blue-700"
+                  }`}
+                >
+                  {userIsFollowed ? <FaCheck /> : <FaUserPlus />}
+                  {userIsFollowed ? "Following" : "Follow"}
+                </button>
+              )}
             </div>
 
             {/* Stats */}
@@ -590,7 +647,7 @@ export default function Profile() {
                 }`}
               >
                 <FaRegFileLines />
-                My Posts
+                {isOwnProfile ? "My Posts" : "Posts"}
                 <span
                   className={`rounded-full px-2 py-0.5 text-xs ${
                     activeTab === "myPosts"
@@ -602,6 +659,7 @@ export default function Profile() {
                 </span>
               </button>
 
+              {isOwnProfile && (
               <button
                 type="button"
                 role="tab"
@@ -616,22 +674,51 @@ export default function Profile() {
                 <FaBookmark />
                 Saved Posts
               </button>
+              )}
             </div>
 
             <div className="pt-5">
-              {activeTab === "saved" ? (
-                <EmptyState
-                  title="Saved posts"
-                  description="Your saved posts will appear here when the saved-posts API is connected."
-                  icon={<FaBookmark size={24} />}
-                />
+              {isOwnProfile && activeTab === "saved" ? (
+                isSavedLoading ? (
+                  <PostsSkeleton />
+                ) : isSavedError ? (
+                  <div
+                    role="alert"
+                    className="rounded-3xl border border-red-100 bg-white px-6 py-12 text-center shadow-sm"
+                  >
+                    <p className="text-sm text-slate-600">
+                      Couldn't load your saved posts.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => refetchSaved()}
+                      className="mt-4 rounded-full bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                    >
+                      Try again
+                    </button>
+                  </div>
+                ) : savedPosts.length > 0 ? (
+                  <div className="space-y-5">
+                    {savedPosts.map((post) => (
+                      <PostCard key={post._id} post={post} />
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState
+                    title="No saved posts"
+                    description="Tap the bookmark icon on any post to keep it here."
+                    icon={<FaBookmark size={24} />}
+                  />
+                )
               ) : (
                 <>
-                  {/* Create Post component */}
+                  {/* Create Post component (own profile only) */}
 
-                  <div className="mb-5">
-                    <CreatePost onCreatePost={handleCreatePost} />
-                  </div>
+                  {isOwnProfile && (
+                    <div className="mb-5">
+                      <CreatePost onCreatePost={handleCreatePost} />
+                    </div>
+                  )}
 
                   {/* Loading posts */}
 
@@ -647,7 +734,7 @@ export default function Profile() {
                       </div>
 
                       <h3 className="mt-4 text-lg font-bold text-slate-900">
-                        Couldn't load your posts
+                        Couldn't load posts
                       </h3>
 
                       <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">
@@ -676,7 +763,11 @@ export default function Profile() {
                   ) : (
                     <EmptyState
                       title="No posts yet"
-                      description="Your posts will appear here when you start sharing."
+                      description={
+                        isOwnProfile
+                          ? "Your posts will appear here when you start sharing."
+                          : "This user hasn't posted anything yet."
+                      }
                       icon={<FaRegFileLines size={24} />}
                     />
                   )}

@@ -1,6 +1,10 @@
-import { useContext, useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
+import { useContext, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   FaXmark,
   FaGlobe,
@@ -15,6 +19,12 @@ import type { Post } from "../../types/post";
 import { AuthencreatedContext } from "../../context/AuthenContext";
 import PostsError from "./PostsError";
 import UpdateDeleteComment, { EditCommentForm } from "./UpdateDeleteComment";
+import { getUserIdFromToken } from "../PostCard/Getuseridfromtoken";
+import { api } from "../../lib/api";
+import { DEFAULT_AVATAR, handleAvatarError } from "../../lib/avatar";
+import { fullDate, timeAgo } from "../../lib/time";
+import { useModalA11y } from "../../hooks/useModalA11y";
+import { extractNextPage } from "../../types/post";
 
 interface DetailsPostProps {
   post: Post;
@@ -37,23 +47,6 @@ interface CommentType {
   };
 }
 
-const baseUrl = "https://route-posts.routemisr.com";
-
-// --------------------------------------------------------
-// بنطلع id المستخدم الحالي من الـ JWT token (من غير أي request زيادة)
-// --------------------------------------------------------
-function getUserIdFromToken(token?: string | null): string | null {
-  if (!token) return null;
-  try {
-    const payload = token.split(".")[1];
-    const json = JSON.parse(
-      atob(payload.replace(/-/g, "+").replace(/_/g, "/")),
-    );
-    return json.user ?? json.id ?? json._id ?? json.userId ?? null;
-  } catch {
-    return null;
-  }
-}
 
 // --------------------------------------------------------
 // مكون فرعي لكل تعليق - الإعجاب بيتخزن في السيرفر
@@ -71,6 +64,11 @@ function CommentItem({
   currentUserId: string | null;
   onReplyClick: (username: string) => void;
 }) {
+  const creatorId = comment.commentCreator?._id;
+  const creatorPath =
+    creatorId && creatorId !== currentUserId
+      ? `/profile/${creatorId}`
+      : "/profile";
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
 
@@ -93,10 +91,8 @@ function CommentItem({
 
   const likeMutation = useMutation({
     mutationFn: async () => {
-      const response = await axios.put(
-        `${baseUrl}/posts/${postId}/comments/${comment._id}/like`,
-        {},
-        { headers: { token } },
+      const response = await api.put(
+        `/posts/${postId}/comments/${comment._id}/like`,
       );
       return response.data;
     },
@@ -110,15 +106,14 @@ function CommentItem({
 
   return (
     <article className="group flex gap-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition-all hover:shadow-md">
-      <img
-        src={comment.commentCreator?.photo || "/default-avatar.png"}
-        alt={comment.commentCreator?.name || "User"}
-        onError={(event) => {
-          event.currentTarget.onerror = null;
-          event.currentTarget.src = "/default-avatar.png";
-        }}
-        className="h-10 w-10 shrink-0 rounded-full object-cover ring-2 ring-gray-50"
-      />
+      <Link to={creatorPath} className="shrink-0">
+        <img
+          src={comment.commentCreator?.photo || DEFAULT_AVATAR}
+          alt={comment.commentCreator?.name || "User"}
+          onError={handleAvatarError}
+          className="h-10 w-10 rounded-full object-cover ring-2 ring-gray-50"
+        />
+      </Link>
 
       <div className="min-w-0 flex-1">
         {isEditing ? (
@@ -133,9 +128,12 @@ function CommentItem({
         ) : (
           <div className="flex items-center gap-1">
             <div className="min-w-0 flex-1 rounded-2xl rounded-tl-none bg-gray-50/80 px-3 py-2.5">
-              <p className="font-bold text-gray-900 text-[14px] cursor-pointer hover:underline">
+              <Link
+                to={creatorPath}
+                className="block font-bold text-gray-900 text-[14px] hover:underline"
+              >
                 {comment.commentCreator?.name || "User"}
-              </p>
+              </Link>
               <p className="mt-0.5 whitespace-pre-wrap break-words text-sm leading-relaxed text-gray-700">
                 {comment.content}
               </p>
@@ -155,9 +153,13 @@ function CommentItem({
         {/* أزرار التفاعل (Like, Reply, Time) */}
         <div className="mt-2 flex items-center gap-4 px-2 text-[12px] font-semibold text-gray-500">
           {comment.createdAt && (
-            <span className="text-gray-400 font-normal">
-              {new Date(comment.createdAt).toLocaleDateString()}
-            </span>
+            <time
+              dateTime={comment.createdAt}
+              title={fullDate(comment.createdAt)}
+              className="text-gray-400 font-normal"
+            >
+              {timeAgo(comment.createdAt)}
+            </time>
           )}
 
           <div className="flex items-center gap-3">
@@ -209,45 +211,64 @@ export default function DetailsPost({ post, onClose }: DetailsPostProps) {
   const currentUserId = getUserIdFromToken(token);
 
   const [content, setContent] = useState("");
-  const [page, setPage] = useState(1);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
 
-  const { data, isLoading, isError, isFetching, refetch } = useQuery({
-    queryKey: ["postComments", post._id, token, page],
-    queryFn: async () => {
-      const response = await axios.get(
-        `${baseUrl}/posts/${post._id}/comments`,
-        {
-          params: { page, limit: 10 },
-          headers: { token },
-        },
-      );
+  const dialogRef = useRef<HTMLElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  useModalA11y(dialogRef, onClose);
+
+  // Infinite query: "Load more" now APPENDS the next page to the list
+  // instead of replacing the first page.
+  const {
+    data,
+    isLoading,
+    isError,
+    isFetching,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    refetch,
+  } = useInfiniteQuery({
+    queryKey: ["postComments", post._id, token],
+    initialPageParam: 1,
+    queryFn: async ({ pageParam }) => {
+      const response = await api.get(`/posts/${post._id}/comments`, {
+        params: { page: pageParam, limit: 10 },
+      });
       return response.data;
     },
+    getNextPageParam: (lastPage) => extractNextPage(lastPage),
     enabled: Boolean(token && post._id),
     staleTime: 0,
     retry: 1,
   });
 
-  const comments: CommentType[] =
-    data?.data?.comments ??
-    data?.data?.data?.comments ??
-    (Array.isArray(data?.data) ? data.data : []);
+  const comments: CommentType[] = (() => {
+    const map = new Map<string, CommentType>();
 
-  const nextPage = data?.data?.paginationInfo?.nextPage;
+    (data?.pages ?? []).forEach((page) => {
+      const list: CommentType[] =
+        page?.data?.comments ??
+        page?.data?.data?.comments ??
+        (Array.isArray(page?.data) ? page.data : []);
+
+      list.forEach((comment) => map.set(comment._id, comment));
+    });
+
+    return Array.from(map.values());
+  })();
 
   const addCommentMutation = useMutation({
     mutationFn: async (commentContent: string) => {
-      const response = await axios.post(
-        `${baseUrl}/posts/${post._id}/comments`,
-        { content: commentContent },
-        { headers: { token } },
-      );
+      const response = await api.post(`/posts/${post._id}/comments`, {
+        content: commentContent,
+      });
       return response.data;
     },
 
     onSuccess: async () => {
       setContent("");
-      setPage(1);
+      setReplyingTo(null);
       await queryClient.invalidateQueries({
         queryKey: ["postComments", post._id, token],
       });
@@ -262,15 +283,19 @@ export default function DetailsPost({ post, onClose }: DetailsPostProps) {
     addCommentMutation.mutate(trimmedContent);
   }
 
-  // دالة للتعامل مع زر الرد لإضافة اسم المستخدم في حقل الإدخال
+  // Reply = mention the author, show who we're replying to, and focus the box.
+  // (A real nested reply needs its own endpoint; this keeps the mention.)
   const handleReplyClick = (username: string) => {
-    setContent((prev) => (prev ? `${prev} @${username} ` : `@${username} `));
+    const mention = `@${username} `;
+
+    setReplyingTo(username);
+    setContent((prev) => (prev.includes(mention) ? prev : mention + prev));
+    window.setTimeout(() => inputRef.current?.focus(), 0);
   };
 
   const { user, body, createdAt } = post;
-  const postImage =
-    (post as Post & { image?: string; imageUrl?: string }).image ??
-    (post as Post & { imageUrl?: string }).imageUrl;
+  const postImage = post.image ?? post.imageUrl;
+  const authorPath = user?._id ? `/profile/${user._id}` : "/profile";
 
   return (
     <div
@@ -278,6 +303,8 @@ export default function DetailsPost({ post, onClose }: DetailsPostProps) {
       onClick={onClose}
     >
       <section
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="details-post-title"
@@ -306,26 +333,28 @@ export default function DetailsPost({ post, onClose }: DetailsPostProps) {
           {/* Post Content Area */}
           <div className="flex shrink-0 flex-col overflow-y-auto border-b border-gray-100 p-6 sm:w-[50%] sm:border-b-0 sm:border-r [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-1.5">
             <div className="mb-4 flex items-center gap-4">
-              <img
-                src={user.photo || "/default-avatar.png"}
-                alt={user.name || "User"}
-                className="h-12 w-12 shrink-0 rounded-full border-2 border-transparent object-cover ring-2 ring-gray-100"
-              />
+              <Link to={authorPath} onClick={onClose} className="shrink-0">
+                <img
+                  src={user.photo || DEFAULT_AVATAR}
+                  alt={user.name || "User"}
+                  onError={handleAvatarError}
+                  className="h-12 w-12 rounded-full border-2 border-transparent object-cover ring-2 ring-gray-100"
+                />
+              </Link>
               <div className="min-w-0">
-                <h3 className="truncate font-bold text-gray-900 hover:underline cursor-pointer">
-                  {user.name}
+                <h3 className="truncate font-bold text-gray-900 hover:underline">
+                  <Link to={authorPath} onClick={onClose}>
+                    {user.name}
+                  </Link>
                 </h3>
                 <p className="truncate text-sm text-gray-500">
                   @{user.username}
                 </p>
                 <p className="mt-0.5 flex items-center gap-1.5 text-xs text-gray-400">
                   <FaGlobe className="text-[10px]" />
-                  {createdAt
-                    ? new Date(createdAt).toLocaleString(undefined, {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      })
-                    : ""}
+                  <time dateTime={createdAt} title={fullDate(createdAt)}>
+                    {timeAgo(createdAt)}
+                  </time>
                 </p>
               </div>
             </div>
@@ -353,9 +382,9 @@ export default function DetailsPost({ post, onClose }: DetailsPostProps) {
               <h3 className="flex items-center gap-2 font-bold text-gray-900">
                 <FaRegComment className="text-blue-500" />
                 Comments
-                {comments.length > 0 && (
+                {(post.commentsCount ?? comments.length) > 0 && (
                   <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
-                    {comments.length}
+                    {post.commentsCount ?? comments.length}
                   </span>
                 )}
               </h3>
@@ -421,14 +450,14 @@ export default function DetailsPost({ post, onClose }: DetailsPostProps) {
                   />
                 ))}
 
-              {nextPage && (
+              {hasNextPage && (
                 <button
                   type="button"
-                  disabled={isFetching}
-                  onClick={() => setPage(Number(nextPage))}
+                  disabled={isFetchingNextPage}
+                  onClick={() => void fetchNextPage()}
                   className="mt-6 w-full rounded-xl border-2 border-dashed border-gray-200 bg-transparent px-4 py-3 text-sm font-bold text-gray-500 transition hover:border-blue-500 hover:text-blue-600 disabled:opacity-50"
                 >
-                  {isFetching ? "Loading more..." : "Load more comments"}
+                  {isFetchingNextPage ? "Loading more..." : "Load more comments"}
                 </button>
               )}
             </div>
@@ -438,8 +467,25 @@ export default function DetailsPost({ post, onClose }: DetailsPostProps) {
               onSubmit={handleSubmit}
               className="shrink-0 bg-white p-4 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] z-10"
             >
+              {replyingTo && (
+                <div className="mb-2 flex items-center justify-between rounded-xl bg-blue-50 px-3 py-1.5 text-xs text-blue-700">
+                  <span>
+                    Replying to <strong>{replyingTo}</strong>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setReplyingTo(null)}
+                    aria-label="Cancel reply"
+                    className="font-semibold hover:underline"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+
               <div className="relative flex items-center gap-3">
                 <input
+                  ref={inputRef}
                   type="text"
                   value={content}
                   onChange={(event) => setContent(event.target.value)}

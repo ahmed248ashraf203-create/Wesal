@@ -1,2 +1,241 @@
 @import "tailwindcss";
 @import "@heroui/styles";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ==========================================================
+   WESAL global theme
+   The theme is activated by adding/removing .dark on <html>.
+   Existing light-theme utility classes are mapped here so the
+   app's pages and shared components support dark mode together.
+   ========================================================== */
+
+:root {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+  background-color: #030712;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+html.dark body,
+html.dark #root {
+  background-color: #030712;
+  color: #f3f4f6;
+}
+
+/* Main light surfaces */
+html.dark .bg-white:not([class*="dark:bg-"]),
+html.dark [class~="bg-white/90"]:not([class*="dark:bg-"]) {
+  background-color: #111827;
+}
+
+html.dark .bg-gray-50:not([class*="dark:bg-"]),
+html.dark [class~="bg-gray-50/50"]:not([class*="dark:bg-"]),
+html.dark [class~="bg-gray-50/80"]:not([class*="dark:bg-"]),
+html.dark [class~="bg-gray-50/30"]:not([class*="dark:bg-"]) {
+  background-color: #111827;
+}
+
+html.dark .bg-gray-100:not([class*="dark:bg-"]) {
+  background-color: #1f2937;
+}
+
+html.dark .bg-gray-200:not([class*="dark:bg-"]) {
+  background-color: #374151;
+}
+
+html.dark .bg-gray-300:not([class*="dark:bg-"]) {
+  background-color: #4b5563;
+}
+
+html.dark .bg-slate-50:not([class*="dark:bg-"]) {
+  background-color: #111827;
+}
+
+html.dark .bg-slate-100:not([class*="dark:bg-"]) {
+  background-color: #1f2937;
+}
+
+html.dark .bg-slate-200:not([class*="dark:bg-"]) {
+  background-color: #374151;
+}
+
+/* Low-contrast accent surfaces */
+html.dark .bg-indigo-50:not([class*="dark:bg-"]),
+html.dark [class~="bg-indigo-50/70"]:not([class*="dark:bg-"]),
+html.dark [class~="bg-indigo-50/40"]:not([class*="dark:bg-"]) {
+  background-color: #1e1b4b;
+}
+
+html.dark .bg-indigo-100:not([class*="dark:bg-"]) {
+  background-color: #312e81;
+}
+
+html.dark .bg-blue-50:not([class*="dark:bg-"]),
+html.dark [class~="bg-blue-50/30"]:not([class*="dark:bg-"]) {
+  background-color: #172554;
+}
+
+html.dark .bg-blue-100:not([class*="dark:bg-"]) {
+  background-color: #1e3a8a;
+}
+
+html.dark .bg-violet-50:not([class*="dark:bg-"]) {
+  background-color: #2e1065;
+}
+
+html.dark .bg-red-50:not([class*="dark:bg-"]),
+html.dark [class~="bg-red-50/50"]:not([class*="dark:bg-"]),
+html.dark [class~="bg-red-50/80"]:not([class*="dark:bg-"]) {
+  background-color: #450a0a;
+}
+
+html.dark .bg-red-100:not([class*="dark:bg-"]) {
+  background-color: #7f1d1d;
+}
+
+html.dark .bg-green-50:not([class*="dark:bg-"]) {
+  background-color: #052e16;
+}
+
+html.dark .bg-yellow-50:not([class*="dark:bg-"]) {
+  background-color: #422006;
+}
+
+html.dark .bg-emerald-50:not([class*="dark:bg-"]),
+html.dark [class~="bg-emerald-50/80"]:not([class*="dark:bg-"]) {
+  background-color: #022c22;
+}
+
+/* Custom light backgrounds used in the auth pages, home, profile
+   and error page. Attribute selectors are used for Tailwind's
+   bracket-notation classes. */
+html.dark [class~="bg-[#f0f2f5]"],
+html.dark [class~="bg-[#f1f3f6]"],
+html.dark [class~="bg-[#f8faff]"] {
+  background-color: #030712;
+}
+
+html.dark [class~="bg-[#f0f4f8]"],
+html.dark [class~="bg-[#f8fafc]"] {
+  background-color: #1f2937;
+}
+
+html.dark [class~="bg-[#f3f6ff]"] {
+  background-color: #172554;
+}
+
+/* Body and heading text */
+html.dark .text-gray-900:not([class*="dark:text-"]),
+html.dark .text-slate-900:not([class*="dark:text-"]) {
+  color: #f9fafb;
+}
+
+html.dark .text-gray-800:not([class*="dark:text-"]),
+html.dark .text-slate-800:not([class*="dark:text-"]) {
+  color: #f3f4f6;
+}
+
+html.dark .text-gray-700:not([class*="dark:text-"]),
+html.dark .text-slate-700:not([class*="dark:text-"]) {
+  color: #e5e7eb;
+}
+
+html.dark .text-gray-600:not([class*="dark:text-"]),
+html.dark .text-slate-600:not([class*="dark:text-"]) {
+  color: #d1d5db;
+}
+
+html.dark .text-gray-500:not([class*="dark:text-"]),
+html.dark .text-slate-500:not([class*="dark:text-"]) {
+  color: #9ca3af;
+}
+
+html.dark .text-gray-400:not([class*="dark:text-"]),
+html.dark .text-slate-400:not([class*="dark:text-"]) {
+  color: #9ca3af;
+}
+
+/* Custom text colors used by the login/signup screens */
+html.dark [class~="text-[#101828]"],
+html.dark [class~="text-[#17223b]"],
+html.dark [class~="text-[#172f52]"] {
+  color: #f3f4f6;
+}
+
+html.dark [class~="text-[#52627b]"],
+html.dark [class~="text-[#8995a7]"],
+html.dark [class~="text-[#91a4bf]"] {
+  color: #9ca3af;
+}
+
+html.dark [class~="text-[#0b3694]"] {
+  color: #bfdbfe;
+}
+
+/* Borders */
+html.dark .border-gray-100:not([class*="dark:border-"]),
+html.dark .border-gray-200:not([class*="dark:border-"]),
+html.dark .border-slate-100:not([class*="dark:border-"]),
+html.dark .border-slate-200:not([class*="dark:border-"]) {
+  border-color: #374151;
+}
+
+html.dark .border-gray-300:not([class*="dark:border-"]),
+html.dark .border-slate-300:not([class*="dark:border-"]) {
+  border-color: #4b5563;
+}
+
+html.dark .border-white:not([class*="dark:border-"]) {
+  border-color: #374151;
+}
+
+html.dark [class~="border-[#dce3ec]"],
+html.dark [class~="border-[#c7d5ff]"] {
+  border-color: #374151;
+}
+
+/* Form controls, including HeroUI-backed native inputs */
+html.dark input,
+html.dark textarea,
+html.dark select {
+  color: #f9fafb;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #9ca3af;
+}
+
+html.dark input:not([type="checkbox"]):not([type="radio"]),
+html.dark textarea,
+html.dark select {
+  border-color: #374151;
+}
+
+/* Keep success/error labels readable on dark surfaces */
+html.dark .text-red-800:not([class*="dark:text-"]),
+html.dark .text-red-700:not([class*="dark:text-"]) {
+  color: #fca5a5;
+}
+
+html.dark .text-emerald-700:not([class*="dark:text-"]) {
+  color: #6ee7b7;
+}
+
+html.dark .text-green-600:not([class*="dark:text-"]) {
+  color: #86efac;
+}
+
+/* A subtle scrollbar that matches the dark theme */
+html.dark * {
+  scrollbar-color: #4b5563 #111827;
+}

@@ -26,7 +26,7 @@ export default function LeftSide() {
           </p>
 
           <h2 className="mt-2 text-[19px] font-bold text-[#17223b]">
-            Egypt's Leading Social Connection Platform Since 2026
+            A modern place to share, follow and stay connected
           </h2>
 
           <p className="mt-3 text-[14px] leading-6 text-[#52627b]">
@@ -37,13 +37,14 @@ export default function LeftSide() {
             content, and user privacy.
           </p>
 
-          {/* Statistics */}
+          {/* What you can do on Wesal */}
           <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <Stat number="2026" label="FOUNDED" />
-            <Stat number="40K+" label="GRADUATES" />
-            <Stat number="50+" label="PARTNER COMPANIES" />
-            <Stat number="5" label="BRANCHES" />
-            <Stat number="20" label="DIPLOMAS AVAILABLE" />
+            <Stat number="Share" label="POSTS & PHOTOS" />
+            <Stat number="Follow" label="FRIENDS & PEOPLE" />
+            <Stat number="React" label="LIKE & COMMENT" />
+            <Stat number="Save" label="POSTS FOR LATER" />
+            <Stat number="Stay" label="NOTIFIED" />
+            <Stat number="Dark" label="MODE SUPPORT" />
           </div>
         </div>
       </section>

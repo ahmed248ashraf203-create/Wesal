@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
 import { FaEllipsis, FaPen, FaTrash } from "react-icons/fa6";
-
-const baseUrl = "https://route-posts.routemisr.com";
+import { api } from "../../lib/api";
 
 const commentUrl = (postId: string, commentId: string) =>
-  `${baseUrl}/posts/${postId}/comments/${commentId}`;
+  `/posts/${postId}/comments/${commentId}`;
 
 // --------------------------------------------------------
 // فورم التعديل (بيظهر مكان نص الكومنت وقت الـ Edit)
@@ -42,11 +40,7 @@ export function EditCommentForm({
       const formData = new FormData();
       formData.append("content", content);
 
-      const response = await axios.put(
-        commentUrl(postId, commentId),
-        formData,
-        { headers: { token } },
-      );
+      const response = await api.put(commentUrl(postId, commentId), formData);
       return response.data;
     },
     onSuccess: async () => {
@@ -75,7 +69,11 @@ export function EditCommentForm({
             event.preventDefault();
             save();
           }
-          if (event.key === "Escape") onCancel();
+          if (event.key === "Escape") {
+            // Cancel only the comment edit, don't also close the post modal.
+            event.stopPropagation();
+            onCancel();
+          }
         }}
         aria-label="Edit comment"
         className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50/50 px-3 py-2 text-sm text-gray-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 disabled:opacity-60"
@@ -191,9 +189,7 @@ export default function UpdateDeleteComment({
   // DELETE /posts/:postId/comments/:commentId
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      const response = await axios.delete(commentUrl(postId, commentId), {
-        headers: { token },
-      });
+      const response = await api.delete(commentUrl(postId, commentId));
       return response.data;
     },
     onSuccess: async () => {

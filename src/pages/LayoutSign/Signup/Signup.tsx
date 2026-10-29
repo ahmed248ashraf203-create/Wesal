@@ -2,33 +2,24 @@ import { Button, Input, Label, ListBox, Select, toast } from "@heroui/react";
 
 import { NavLink, useNavigate } from "react-router-dom";
 
-import {
-  FiUser,
-  FiAtSign,
-  FiMail,
-  FiUsers,
-  FiCalendar,
-  FiKey,
-} from "react-icons/fi";
+import { FiUsers, FiCalendar } from "react-icons/fi";
 import { Controller, useForm } from "react-hook-form";
 import type { SignupForm } from "./Signup-types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signupSchema } from "../../Schema/signupSchema";
-import axios, { isAxiosError } from "axios";
 import { useContext, useState } from "react";
-import { boolean } from "zod";
+import { api, getErrorMessage } from "../../../lib/api";
 import { AuthencreatedContext } from "../../../context/AuthenContext";
 import FieldError from "../FieldError";
+import Seo from "../../../components/Seo/Seo";
 
 export default function Signup() {
   const {
     handleSubmit,
     register,
     control,
-    setError,
     formState: { errors },
-    reset,
-  } = useForm({
+  } = useForm<SignupForm>({
     defaultValues: {
       name: "",
       username: "",
@@ -43,37 +34,34 @@ export default function Signup() {
   });
   const { addsetToken } = useContext(AuthencreatedContext);
 
-  let nav = useNavigate();
+  const nav = useNavigate();
 
   const [loading, setLoding] = useState(false);
   async function myhandleSubmit(values: SignupForm) {
-    console.log("helllllo", values);
-    try {
-      if (loading) {
-        return;
-      }
+    if (loading) return;
 
+    try {
       setLoding(true);
-      let { data } = await axios.post(
-        "https://route-posts.routemisr.com/users/signup",
-        values,
-      );
+
+      const { data } = await api.post("/users/signup", values);
+
       toast.success(data.message);
       addsetToken(data.data.token);
-      setTimeout(() => {
-        nav("/home");
-      }, 2000);
+      nav("/home");
     } catch (error) {
-      if (isAxiosError(error)) {
-        toast.danger(error.response?.data.message);
-      }
+      // The form is NOT reset on failure (for example a duplicate email),
+      // so the user only has to fix the one field.
+      toast.danger(getErrorMessage(error, "Signup failed. Please try again."));
     } finally {
       setLoding(false);
-      reset();
     }
   }
   return (
     <>
+      <Seo
+        title="Create account"
+        description="Join Wesal: create a free account and start sharing."
+      />
       <section className="mx-auto w-full max-w-[465px] rounded-2xl bg-white p-6 shadow-sm sm:p-7">
         {/* Login / Register */}
         <div className="mb-7 flex h-[46px] rounded-xl bg-[#f0f4f8] p-1">
@@ -140,7 +128,7 @@ export default function Signup() {
               {...register("username")}
               aria-label="Username"
               aria-invalid={!!errors.username}
-              placeholder="Username (optional)"
+              placeholder="Username"
               type="text"
               className={`h-12 w-full rounded-xl border px-4 text-[14px] shadow-none transition-all duration-200 ${
                 errors.username
@@ -159,6 +147,7 @@ export default function Signup() {
               aria-invalid={!!errors.email}
               placeholder="Email address"
               type="email"
+              autoComplete="email"
               className={`h-12 w-full rounded-xl border px-4 text-[14px] shadow-none transition-all duration-200 ${
                 errors.email
                   ? "border-red-300 bg-red-50/50 focus-within:ring-2 focus-within:ring-red-100"
@@ -170,39 +159,51 @@ export default function Signup() {
 
           {/* Gender */}
           <div>
-            <Select
-              aria-label="Gender"
-              placeholder="Select gender"
-              className="w-full"
-            >
-              <Label className="sr-only">Gender</Label>
+            {/* Controller connects the HeroUI Select to react-hook-form,
+                otherwise the chosen value never reaches the submitted data. */}
+            <Controller
+              name="gender"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  aria-label="Gender"
+                  placeholder="Select gender"
+                  className="w-full"
+                  selectedKey={field.value || null}
+                  onSelectionChange={(key) =>
+                    field.onChange(key == null ? "" : String(key))
+                  }
+                >
+                  <Label className="sr-only">Gender</Label>
 
-              <Select.Trigger
-                className={`h-12 rounded-xl border bg-[#f8fafc] px-4 shadow-none transition-all duration-200 ${
-                  errors.gender
-                    ? "border-red-300 bg-red-50/50"
-                    : "border-[#dce3ec] focus-within:border-indigo-400"
-                }`}
-              >
-                <FiUsers className="mr-3 text-[20px] text-[#91a4bf]" />
-                <Select.Value />
-                <Select.Indicator />
-              </Select.Trigger>
+                  <Select.Trigger
+                    className={`h-12 rounded-xl border bg-[#f8fafc] px-4 shadow-none transition-all duration-200 ${
+                      errors.gender
+                        ? "border-red-300 bg-red-50/50"
+                        : "border-[#dce3ec] focus-within:border-indigo-400"
+                    }`}
+                  >
+                    <FiUsers className="mr-3 text-[20px] text-[#91a4bf]" />
+                    <Select.Value />
+                    <Select.Indicator />
+                  </Select.Trigger>
 
-              <Select.Popover>
-                <ListBox>
-                  <ListBox.Item id="male" textValue="Male">
-                    Male
-                    <ListBox.ItemIndicator />
-                  </ListBox.Item>
+                  <Select.Popover>
+                    <ListBox>
+                      <ListBox.Item id="male" textValue="Male">
+                        Male
+                        <ListBox.ItemIndicator />
+                      </ListBox.Item>
 
-                  <ListBox.Item id="female" textValue="Female">
-                    Female
-                    <ListBox.ItemIndicator />
-                  </ListBox.Item>
-                </ListBox>
-              </Select.Popover>
-            </Select>
+                      <ListBox.Item id="female" textValue="Female">
+                        Female
+                        <ListBox.ItemIndicator />
+                      </ListBox.Item>
+                    </ListBox>
+                  </Select.Popover>
+                </Select>
+              )}
+            />
 
             <FieldError message={errors.gender?.message} />
           </div>
@@ -242,6 +243,7 @@ export default function Signup() {
               aria-invalid={!!errors.password}
               placeholder="Password"
               type="password"
+              autoComplete="new-password"
               className={`h-12 w-full rounded-xl border px-4 text-[14px] shadow-none transition-all duration-200 ${
                 errors.password
                   ? "border-red-300 bg-red-50/50 focus-within:ring-2 focus-within:ring-red-100"
@@ -259,6 +261,7 @@ export default function Signup() {
               aria-invalid={!!errors.rePassword}
               placeholder="Confirm password"
               type="password"
+              autoComplete="new-password"
               className={`h-12 w-full rounded-xl border px-4 text-[14px] shadow-none transition-all duration-200 ${
                 errors.rePassword
                   ? "border-red-300 bg-red-50/50 focus-within:ring-2 focus-within:ring-red-100"

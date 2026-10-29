@@ -1,5 +1,4 @@
 import { useContext } from "react";
-import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
 
 import { AuthencreatedContext } from "../../context/AuthenContext";
@@ -10,8 +9,9 @@ import Loader from "../Loader/Loader";
 import FeedError from "../FeedError/FeedError";
 import { getUserIdFromToken } from "../PostCard/Getuseridfromtoken";
 import Sidebar from "../../Layout/Sidebar/Sidebar";
-
-const baseUrl = "https://route-posts.routemisr.com";
+import Seo from "../Seo/Seo";
+import { api } from "../../lib/api";
+import { extractPosts } from "../../types/post";
 
 export default function MyPosts() {
   const { token } = useContext(AuthencreatedContext);
@@ -27,9 +27,7 @@ export default function MyPosts() {
         throw new Error("Unable to identify the current user.");
       }
 
-      const response = await axios.get(`${baseUrl}/users/${userId}/posts`, {
-        headers: { token },
-      });
+      const response = await api.get(`/users/${userId}/posts`);
 
       return response.data;
     },
@@ -40,7 +38,7 @@ export default function MyPosts() {
     retry: 1,
   });
 
-  const posts: Post[] = data?.data?.posts ?? data?.data?.postsFeed ?? [];
+  const posts: Post[] = extractPosts(data);
 
   if (!token) {
     return <p>Please log in to view your posts.</p>;
@@ -67,6 +65,7 @@ export default function MyPosts() {
   }
   return (
     <div className="min-h-screen bg-[#f0f2f5]">
+      <Seo title="My posts" description="Everything you posted on Wesal." noIndex />
       <div className="mx-auto grid max-w-[1400px] grid-cols-1 items-start gap-5 px-4 py-5 lg:grid-cols-[230px_minmax(0,1fr)]">
         <aside className="hidden lg:block">
           <Sidebar />
@@ -95,25 +94,4 @@ export default function MyPosts() {
       </div>
     </div>
   );
-}
-
-function getCurrentUserId(token: string | null | undefined): string | null {
-  try {
-    if (!token) return null;
-
-    const payload = token.split(".")[1];
-    if (!payload) return null;
-
-    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
-
-    const decoded = JSON.parse(
-      atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=")),
-    );
-
-    return (
-      decoded.user?._id ?? decoded.userId ?? decoded.id ?? decoded._id ?? null
-    );
-  } catch {
-    return null;
-  }
 }

@@ -10,8 +10,10 @@ const menuItems = [
 
 export default function Sidebar() {
   return (
-    <aside className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
-      <h2 className="mb-4 px-3 text-lg font-bold text-gray-900">Menu</h2>
+    <aside className="fixed top-24 w-[230px] rounded-2xl border border-gray-200 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+      <h2 className="mb-4 px-3 text-lg font-bold text-gray-900 dark:text-white">
+        Menu
+      </h2>
 
       <div className="space-y-1">
         {menuItems.map(({ label, path, icon: Icon }) => (
@@ -22,7 +24,7 @@ export default function Sidebar() {
               `flex items-center gap-2 rounded-xl px-4 py-3 font-semibold transition-all duration-300 ${
                 isActive
                   ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-sm"
-                  : "text-gray-600 hover:bg-indigo-50 hover:text-indigo-600"
+                  : "text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 dark:text-gray-300 dark:hover:bg-gray-800"
               }`
             }
           >

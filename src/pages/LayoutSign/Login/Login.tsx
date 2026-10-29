@@ -1,29 +1,20 @@
-import React, { useContext, useState } from "react";
-import { Button, Input, Label, ListBox, Select, toast } from "@heroui/react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
-import {
-  FiUser,
-  FiAtSign,
-  FiMail,
-  FiUsers,
-  FiCalendar,
-  FiKey,
-} from "react-icons/fi";
+import { useContext, useState } from "react";
+import { Button, Input, toast } from "@heroui/react";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema } from "../../Schema/LoginSchema";
 import type { LoginForm } from "./Login-types";
-import axios, { isAxiosError } from "axios";
+import { api, getErrorMessage } from "../../../lib/api";
 import { AuthencreatedContext } from "../../../context/AuthenContext";
+import Seo from "../../../components/Seo/Seo";
+
 export default function Login() {
   const {
     handleSubmit,
     register,
-    control,
-    setError,
     formState: { errors },
-    reset,
-  } = useForm({
+  } = useForm<LoginForm>({
     defaultValues: {
       email: "",
       password: "",
@@ -33,37 +24,33 @@ export default function Login() {
   });
   const [loading, setLoding] = useState(false);
   const { addsetToken } = useContext(AuthencreatedContext);
-  let nav = useNavigate();
+  const nav = useNavigate();
 
   async function myhandleSubmit(values: LoginForm) {
-    console.log("helllllo", values);
-    try {
-      if (loading) {
-        return;
-      }
+    if (loading) return;
 
+    try {
       setLoding(true);
-      let { data } = await axios.post(
-        "https://route-posts.routemisr.com/users/signin",
-        values,
-      );
-      console.log("Response:", data);
+
+      const { data } = await api.post("/users/signin", values);
 
       toast.success(data.message);
       addsetToken(data.data.token);
       nav("/home");
     } catch (error) {
-      if (isAxiosError(error)) {
-        toast.danger(error.response?.data.message);
-      }
+      // Keep what the user typed so they can fix it and retry.
+      toast.danger(getErrorMessage(error, "Login failed. Please try again."));
     } finally {
       setLoding(false);
-      reset();
     }
   }
 
   return (
     <>
+      <Seo
+        title="Log in"
+        description="Log in to Wesal and continue your social journey."
+      />
       <section className="mx-auto w-full max-w-[465px] rounded-2xl bg-white p-6 shadow-sm sm:p-7">
         {/* Login / Register */}
         <div className="mb-7 flex h-[46px] rounded-xl bg-[#f0f4f8] p-1">
@@ -113,6 +100,7 @@ export default function Login() {
             aria-label="Email address"
             placeholder="Email address"
             type="email"
+            autoComplete="email"
             className="h-12 w-full rounded-xl border border-[#dce3ec] bg-[#f8fafc] px-4 text-[14px] shadow-none"
           />
           {errors.email?.message && (
@@ -127,6 +115,7 @@ export default function Login() {
             aria-label="Password"
             placeholder="Password"
             type="password"
+            autoComplete="current-password"
             className="h-12 w-full rounded-xl border border-[#dce3ec] bg-[#f8fafc] px-4 text-[14px] shadow-none"
           />
           {errors.password?.message && (

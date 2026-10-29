@@ -1,4 +1,5 @@
 export interface SignupForm {
+  name: string;
   username: string;
   email: string;
   dateOfBirth: string;
