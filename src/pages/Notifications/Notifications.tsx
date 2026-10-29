@@ -19,6 +19,7 @@ import {
 } from "react-icons/fa6";
 
 import { AuthencreatedContext } from "../../context/AuthenContext";
+import axios from "axios";
 
 interface NotificationItem {
   _id: string;
@@ -109,16 +110,13 @@ export default function Notifications() {
         throw new Error("You are not authenticated.");
       }
 
-      const response = await api.get<NotificationsResponse>(
-        "/notifications",
-        {
-          params: {
-            unread: filter === "unread",
-            page,
-            limit,
-          },
+      const response = await api.get<NotificationsResponse>("/notifications", {
+        params: {
+          unread: filter === "unread",
+          page,
+          limit,
         },
-      );
+      });
 
       return response.data;
     },
@@ -212,7 +210,9 @@ export default function Notifications() {
   return (
     <div className="min-h-screen bg-gray-50/50 pb-12 dark:bg-gray-950">
       <Seo
-        title={unreadCount > 0 ? `(${unreadCount}) Notifications` : "Notifications"}
+        title={
+          unreadCount > 0 ? `(${unreadCount}) Notifications` : "Notifications"
+        }
         description="Your latest activity on Wesal."
         noIndex
       />
