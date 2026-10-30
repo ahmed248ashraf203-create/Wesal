@@ -731,7 +731,7 @@ export default function PostCard({ post }: PostCardProps) {
         <ModalShell
           role="alertdialog"
           labelledBy={`delete-title-${post._id}`}
-          className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"
+          className="max-h-[90dvh] w-full max-w-sm overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl sm:p-6"
           onClose={() => {
             if (deletePostMutation.isPending) return;
             setIsDeleteOpen(false);

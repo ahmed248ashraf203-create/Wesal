@@ -171,17 +171,23 @@ export default function UpdateDeleteComment({
     if (!isOpen) return;
 
     const handleClose = () => closeMenu();
+    // Mobile keyboards fire "resize" (height only); close just on width change.
+    let lastWidth = window.innerWidth;
+    const handleResize = () => {
+      if (window.innerWidth !== lastWidth) closeMenu();
+      lastWidth = window.innerWidth;
+    };
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") closeMenu();
     };
 
     window.addEventListener("scroll", handleClose, true);
-    window.addEventListener("resize", handleClose);
+    window.addEventListener("resize", handleResize);
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
       window.removeEventListener("scroll", handleClose, true);
-      window.removeEventListener("resize", handleClose);
+      window.removeEventListener("resize", handleResize);
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [isOpen]);

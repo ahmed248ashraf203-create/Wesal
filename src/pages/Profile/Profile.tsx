@@ -373,7 +373,7 @@ export default function Profile() {
 
   if (!token) {
     return (
-      <div className="flex min-h-[70vh] items-center justify-center bg-slate-50 px-4">
+      <div className="flex min-h-[70dvh] items-center justify-center bg-slate-50 px-4">
         <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
             <FaUsers size={28} />
@@ -409,7 +409,7 @@ export default function Profile() {
   // ---------------------------------------------------------
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+    <main className="min-h-dvh bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
       <Seo
         title={isOwnProfile ? "My profile" : displayName}
         description={`${displayName} (@${username}) on Wesal.`}
@@ -794,7 +794,7 @@ export default function Profile() {
       {toast && (
         <div
           role="status"
-          className={`fixed bottom-6 left-1/2 z-[80] flex -translate-x-1/2 items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-white shadow-xl ${
+          className={`fixed bottom-20 left-1/2 z-[80] flex w-max max-w-[90vw] -translate-x-1/2 items-center gap-2 rounded-full px-5 py-3 sm:bottom-6 text-sm font-semibold text-white shadow-xl ${
             toast.type === "success" ? "bg-emerald-600" : "bg-red-600"
           }`}
         >

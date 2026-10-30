@@ -19,7 +19,7 @@ export default function ModalShell({
   onClose,
   labelledBy,
   role = "dialog",
-  className = "w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl",
+  className = "max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl sm:p-5",
 }: ModalShellProps) {
   const ref = useRef<HTMLElement | null>(null);
   useModalA11y(ref, onClose);

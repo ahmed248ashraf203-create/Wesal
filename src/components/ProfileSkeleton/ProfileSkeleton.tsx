@@ -2,7 +2,7 @@ import { Skeleton, SkeletonRoot } from "@heroui/react";
 
 export default function ProfileSkeleton() {
   return (
-    <div className="min-h-screen bg-gray-50/50 pb-12">
+    <div className="min-h-dvh bg-gray-50/50 pb-12">
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
         {/* Banner Skeleton */}
         <Skeleton className="h-44 w-full rounded-3xl" />

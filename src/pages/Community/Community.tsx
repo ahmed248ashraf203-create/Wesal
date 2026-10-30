@@ -20,7 +20,7 @@ export default function Community() {
   );
 
   return (
-    <div className="min-h-screen bg-[#f0f2f5] dark:bg-gray-950">
+    <div className="min-h-dvh bg-[#f0f2f5] dark:bg-gray-950">
       <Seo
         title="Community"
         description="Discover people on Wesal and follow them."

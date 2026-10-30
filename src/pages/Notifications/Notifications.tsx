@@ -207,7 +207,7 @@ export default function Notifications() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50/50 pb-12 dark:bg-gray-950">
+    <div className="min-h-dvh bg-gray-50/50 pb-12 dark:bg-gray-950">
       <Seo
         title={
           unreadCount > 0 ? `(${unreadCount}) Notifications` : "Notifications"
@@ -440,7 +440,7 @@ export default function Notifications() {
         <ModalShell
           labelledBy="notification-details-title"
           onClose={() => setSelectedNotification(null)}
-          className="max-h-[85vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl dark:bg-gray-900 sm:p-6"
+          className="max-h-[85dvh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl dark:bg-gray-900 sm:p-6"
         >
           <>
             <div className="mb-5 flex items-center justify-between">

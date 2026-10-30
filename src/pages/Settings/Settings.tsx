@@ -76,7 +76,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-gray-50/50 py-10 px-4 sm:px-6">
+    <div className="min-h-[calc(100dvh-4rem)] bg-gray-50/50 py-10 px-4 sm:px-6">
       <Seo
         title="Change password"
         description="Update your Wesal account password."

@@ -133,13 +133,13 @@ export default function CreatePost({ onCreatePost }: CreatePostProps) {
 
       <div className="relative mt-4 border-t border-gray-100 pt-4">
         {showEmojiPicker && (
-          <div className="absolute bottom-14 left-0 z-20">
+          <div className="absolute bottom-14 left-0 z-20 w-full max-w-[300px]">
             <EmojiPicker
               onEmojiClick={(emojiData) => {
                 setBody((current) => current + emojiData.emoji);
               }}
               height={350}
-              width={300}
+              width="100%"
             />
           </div>
         )}

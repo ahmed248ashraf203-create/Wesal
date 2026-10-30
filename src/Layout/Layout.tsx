@@ -7,7 +7,7 @@ export default function Layout() {
     <>
       <Navbar />
       {/* pb-16 keeps content clear of the mobile bottom bar */}
-      <div className="pb-16 sm:pb-0">
+      <div className="pb-16 lg:pb-0">
         <Outlet />
       </div>
       <MobileNav />

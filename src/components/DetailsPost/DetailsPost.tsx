@@ -312,10 +312,10 @@ export default function DetailsPost({ post, onClose }: DetailsPostProps) {
         onClick={(event) => event.stopPropagation()}
       >
         {/* Header */}
-        <header className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-gray-100 bg-white/90 px-6 py-4 backdrop-blur-md">
+        <header className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-gray-100 bg-white/90 px-4 py-3 backdrop-blur-md sm:px-6 sm:py-4">
           <h2
             id="details-post-title"
-            className="text-xl font-extrabold tracking-tight text-gray-900"
+            className="text-lg font-extrabold tracking-tight text-gray-900 sm:text-xl"
           >
             Post Details
           </h2>
@@ -331,7 +331,7 @@ export default function DetailsPost({ post, onClose }: DetailsPostProps) {
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden sm:flex-row">
           {/* Post Content Area */}
-          <div className="flex shrink-0 flex-col overflow-y-auto border-b border-gray-100 p-6 sm:w-[50%] sm:border-b-0 sm:border-r [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-1.5">
+          <div className="flex max-h-[40%] shrink-0 flex-col overflow-y-auto border-b border-gray-100 p-4 sm:max-h-none sm:w-[50%] sm:p-6 sm:border-b-0 sm:border-r [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-1.5">
             <div className="mb-4 flex items-center gap-4">
               <Link to={authorPath} onClick={onClose} className="shrink-0">
                 <img

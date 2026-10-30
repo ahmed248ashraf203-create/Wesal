@@ -147,10 +147,10 @@ export default function ProfileImageModal({
         aria-modal="true"
         aria-labelledby="profile-image-title"
         onClick={(event) => event.stopPropagation()}
-        className="w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-black/5"
+        className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white shadow-2xl ring-1 ring-black/5"
       >
         {/* Header */}
-        <header className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
+        <header className="flex items-start justify-between gap-4 border-b border-slate-100 px-4 py-4 sm:px-6 sm:py-5">
           <div>
             <h2
               id="profile-image-title"
@@ -174,13 +174,13 @@ export default function ProfileImageModal({
         </header>
 
         {/* Image Preview */}
-        <div className="bg-slate-50 px-6 py-8">
+        <div className="bg-slate-50 px-4 py-6 sm:px-6 sm:py-8">
           {previewUrl &&
             (kind === "photo" ? (
               <img
                 src={previewUrl}
                 alt="Profile image preview"
-                className="mx-auto h-44 w-44 rounded-full border-4 border-white object-cover shadow-lg"
+                className="mx-auto h-36 w-36 sm:h-44 sm:w-44 rounded-full border-4 border-white object-cover shadow-lg"
               />
             ) : (
               <img
@@ -196,7 +196,7 @@ export default function ProfileImageModal({
         </div>
 
         {/* Upload Status */}
-        <div className="px-6 py-5">
+        <div className="px-4 py-4 sm:px-6 sm:py-5">
           {isPending && (
             <div className="mb-4">
               <div

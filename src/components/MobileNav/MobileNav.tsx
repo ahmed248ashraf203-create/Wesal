@@ -17,7 +17,7 @@ const items = [
 ];
 
 /**
- * Bottom tab bar for phones. The top Navbar links are hidden under 640px, so
+ * Bottom tab bar for phones. The top Navbar links are hidden under 1024px, so
  * without this there was no way to reach Feed or Notifications on mobile.
  */
 export default function MobileNav() {
@@ -26,7 +26,7 @@ export default function MobileNav() {
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden dark:border-gray-800 dark:bg-gray-950/95"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden dark:border-gray-800 dark:bg-gray-950/95"
     >
       <ul className="mx-auto flex max-w-md items-stretch justify-around">
         {items.map(({ label, path, icon: Icon }) => (

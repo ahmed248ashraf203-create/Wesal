@@ -15,6 +15,9 @@ import {
   FaBell,
   FaMoon,
   FaSun,
+  FaFileLines,
+  FaUsers,
+  FaBookmark,
 } from "react-icons/fa6";
 
 const navLinks = [
@@ -79,7 +82,7 @@ export default function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 border-b border-gray-200 bg-white transition-colors dark:border-gray-800 dark:bg-gray-950">
-      <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-4 px-4">
+      <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-2 px-3 sm:gap-4 sm:px-4">
         {/* Logo */}
         <Link
           to="/home"
@@ -95,13 +98,13 @@ export default function Navbar() {
             />
           </div>
 
-          <span className="bg-gradient-to-r from-blue-700 via-indigo-600 to-violet-600 bg-clip-text text-3xl font-extrabold tracking-tight text-transparent transition-all duration-300 group-hover:from-blue-600 group-hover:via-indigo-500 group-hover:to-violet-500">
+          <span className="hidden bg-gradient-to-r from-blue-700 via-indigo-600 to-violet-600 bg-clip-text text-3xl min-[380px]:inline font-extrabold tracking-tight text-transparent transition-all duration-300 group-hover:from-blue-600 group-hover:via-indigo-500 group-hover:to-violet-500">
             wesal
           </span>
         </Link>
 
         {/* Navigation Links */}
-        <div className="hidden items-center gap-3 sm:flex">
+        <div className="hidden items-center gap-3 lg:flex">
           {navLinks.map((link) => {
             const Icon = link.icon;
 
@@ -187,7 +190,7 @@ export default function Navbar() {
                 className="fixed inset-0 z-40 cursor-default"
               />
 
-              <div className="absolute right-0 z-50 mt-3 w-72 origin-top-right animate-in fade-in slide-in-from-top-2 duration-200 rounded-2xl border border-gray-100 bg-white p-2 shadow-2xl shadow-indigo-950/10 ring-1 ring-black/[0.03] dark:border-gray-700 dark:bg-gray-900 dark:shadow-black/30 dark:ring-white/10">
+              <div className="absolute right-0 z-50 mt-3 w-72 max-w-[calc(100vw-1.5rem)] origin-top-right animate-in fade-in slide-in-from-top-2 duration-200 rounded-2xl border border-gray-100 bg-white p-2 shadow-2xl shadow-indigo-950/10 ring-1 ring-black/[0.03] dark:border-gray-700 dark:bg-gray-900 dark:shadow-black/30 dark:ring-white/10">
                 {/* Dropdown Header */}
                 <div className="mb-2 rounded-xl bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600 p-4">
                   <div className="flex items-center gap-3">
@@ -214,6 +217,45 @@ export default function Navbar() {
 
                 {/* Menu Items */}
                 <div className="space-y-1">
+                  <Link
+                    to="/my-posts"
+                    onClick={() => setMenuOpen(false)}
+                    className="group flex items-center gap-3 rounded-xl px-3 py-3 transition-all duration-200 hover:bg-indigo-50 dark:hover:bg-gray-800 lg:hidden"
+                  >
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-300">
+                      <FaFileLines className="text-base" />
+                    </span>
+                    <span className="flex-1 text-sm font-semibold text-gray-800 dark:text-gray-100">
+                      My Posts
+                    </span>
+                  </Link>
+
+                  <Link
+                    to="/community"
+                    onClick={() => setMenuOpen(false)}
+                    className="group flex items-center gap-3 rounded-xl px-3 py-3 transition-all duration-200 hover:bg-indigo-50 dark:hover:bg-gray-800 lg:hidden"
+                  >
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-300">
+                      <FaUsers className="text-base" />
+                    </span>
+                    <span className="flex-1 text-sm font-semibold text-gray-800 dark:text-gray-100">
+                      Community
+                    </span>
+                  </Link>
+
+                  <Link
+                    to="/saved"
+                    onClick={() => setMenuOpen(false)}
+                    className="group flex items-center gap-3 rounded-xl px-3 py-3 transition-all duration-200 hover:bg-indigo-50 dark:hover:bg-gray-800 lg:hidden"
+                  >
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-300">
+                      <FaBookmark className="text-base" />
+                    </span>
+                    <span className="flex-1 text-sm font-semibold text-gray-800 dark:text-gray-100">
+                      Saved
+                    </span>
+                  </Link>
+
                   <Link
                     to="/profile"
                     onClick={() => setMenuOpen(false)}

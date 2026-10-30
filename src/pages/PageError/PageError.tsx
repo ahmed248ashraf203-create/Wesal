@@ -11,7 +11,7 @@ export default function PageError() {
   const navigate = useNavigate();
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#f8faff] px-4 py-6">
+    <main className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-[#f8faff] px-4 py-6">
       {/* Background */}
       <div className="pointer-events-none absolute -left-24 -top-24 h-64 w-64 rounded-full bg-blue-300/20 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-24 -right-24 h-64 w-64 rounded-full bg-violet-300/20 blur-3xl" />

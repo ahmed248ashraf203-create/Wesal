@@ -12,7 +12,7 @@ export default function Saved() {
     useBookmarks();
 
   return (
-    <div className="min-h-screen bg-[#f0f2f5] dark:bg-gray-950">
+    <div className="min-h-dvh bg-[#f0f2f5] dark:bg-gray-950">
       <Seo
         title="Saved posts"
         description="Posts you saved on Wesal."
